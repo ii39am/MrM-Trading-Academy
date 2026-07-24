@@ -1,0 +1,30 @@
+.next
+node_modules
+.env*
+!.env.example
+*.log
+
+# Build and test output
+build
+dist
+out
+coverage
+playwright-report
+test-results
+blob-report
+*.tsbuildinfo
+
+# Local databases
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# IDE and operating-system files
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini

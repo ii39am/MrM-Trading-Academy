@@ -1,0 +1,5 @@
+import { getSessionUser } from "@/lib/auth";
+import { canAccessVideoAdministration,canManageLesson } from "@/lib/admin";
+import { db } from "@/lib/db";
+import { errorResponse,verifySameOrigin } from "@/lib/security";
+export async function POST(request:Request,{params}:{params:Promise<{id:string}>}){if(!verifySameOrigin(request))return errorResponse("CSRF_REJECTED","Request origin rejected",403);const user=await getSessionUser(),{id}=await params;if(!user||!canAccessVideoAdministration(user)||!await canManageLesson(user,id))return errorResponse("FORBIDDEN","Insufficient permission",403);const lesson=await db.lesson.findUnique({where:{id},include:{video:true}});if(!lesson)return errorResponse("NOT_FOUND","Lesson not found",404);if(!lesson.isPreview&&lesson.video?.state!=="READY")return errorResponse("VIDEO_NOT_READY","Premium lesson video must be ready before publishing",409);await db.$transaction([db.lesson.update({where:{id},data:{publishedAt:new Date()}}),db.securityAuditLog.create({data:{actorId:user.id,action:"LESSON_PUBLISHED",metadata:{lessonId:id}}})]);return Response.json({ok:true})}
