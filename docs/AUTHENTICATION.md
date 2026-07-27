@@ -6,7 +6,9 @@ Registration accepts name, email, password, password confirmation, and terms acc
 
 Passwords use bcrypt with cost 12. Login uses a dummy bcrypt hash for unknown users, generic invalid-credential errors, PostgreSQL-backed IP/account rate limits, five-attempt temporary lockout, verified-email/status checks, and security audit events.
 
-Sessions use a seven-day HS256 JWT with fixed issuer and audience plus a random `jti`. The matching `Session` row, current `sessionVersion`, current database role, `ACTIVE` status, and verified email are checked on every protected server request. Logout revokes the current database session. Password resets and email changes revoke all sessions and increment `sessionVersion`.
+Sessions use a seven-day HS256 JWT with fixed issuer and audience plus a random `jti`. PostgreSQL stores only the SHA-256 digest of that random identifier. The matching hashed `Session` row, current `sessionVersion`, current database role, `ACTIVE` status, and verified email are checked on every protected server request. Logout revokes the current database session. Password resets, email changes, role changes, suspension, and explicit administrator revocation invalidate active sessions.
+
+Successful login records `lastLoginAt`. Registration persists the current `en` or `ar` preference. Migration `20260727143000_customer_auth_metadata` adds those customer-account fields and intentionally causes pre-deployment raw-identifier sessions to require a fresh login after the application switches to hashed session lookup.
 
 The middleware performs an early JWT check for navigation only. Pages and API routes independently revalidate identity and authorization from PostgreSQL.
 

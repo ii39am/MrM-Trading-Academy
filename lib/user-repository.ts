@@ -2,8 +2,8 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import type { User } from "@/lib/types";
 
-type RecordShape={id:string;name:string;email:string;normalizedEmail:string;emailVerifiedAt:Date|null;role:"STUDENT"|"INSTRUCTOR"|"ADMIN";status:"PENDING_VERIFICATION"|"ACTIVE"|"DISABLED"|"MIGRATION_REQUIRED";sessionVersion:number};
-export const publicUser=(record:RecordShape):User=>({id:record.id,name:record.name,email:record.email,emailVerified:Boolean(record.emailVerifiedAt),role:record.role,status:record.status,sessionVersion:record.sessionVersion});
+type RecordShape={id:string;name:string;email:string;normalizedEmail:string;emailVerifiedAt:Date|null;role:"STUDENT"|"INSTRUCTOR"|"ADMIN";status:"PENDING_VERIFICATION"|"ACTIVE"|"DISABLED"|"MIGRATION_REQUIRED";sessionVersion:number;preferredLanguage:string};
+export const publicUser=(record:RecordShape):User=>({id:record.id,name:record.name,email:record.email,emailVerified:Boolean(record.emailVerifiedAt),role:record.role,status:record.status,sessionVersion:record.sessionVersion,preferredLanguage:record.preferredLanguage==="ar"?"ar":"en"});
 const dummyHash="$2a$12$7EoVZpKybCNkU9v9q8i4Qe5IAvSQPOyjZdDJRjhxyyl6YbCXlp.V.";
 
 export const userRepository={
@@ -23,7 +23,7 @@ export const userRepository={
   if(record.status==="DISABLED"||record.status==="MIGRATION_REQUIRED")return {reason:"INVALID" as const};
   if(!record.emailVerifiedAt||record.status!=="ACTIVE")return {reason:"UNVERIFIED" as const,userId:record.id};
   await db.$transaction([
-   db.user.update({where:{id:record.id},data:{failedLoginAttempts:0,lockedUntil:null}}),
+   db.user.update({where:{id:record.id},data:{failedLoginAttempts:0,lockedUntil:null,lastLoginAt:new Date()}}),
    db.securityAuditLog.create({data:{userId:record.id,action:"LOGIN_SUCCEEDED"}})
   ]);
   return {reason:"OK" as const,user:publicUser(record)};

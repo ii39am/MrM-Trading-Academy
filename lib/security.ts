@@ -7,6 +7,7 @@ export function clientKey(request:Request,scope:string){
  const source=trusted?request.headers.get("x-forwarded-for")?.split(",")[0]?.trim():"direct-client";
  return `${scope}:${createHash("sha256").update(source??"unknown").digest("hex")}`;
 }
+export function identifierKey(scope:string,value:string){return `${scope}:${createHash("sha256").update(value).digest("hex")}`}
 export async function enforceRateLimit(key:string,limit:number,windowMs:number){
  const now=new Date(), resetAt=new Date(Date.now()+windowMs);
  const bucket=await db.$transaction(async tx=>{

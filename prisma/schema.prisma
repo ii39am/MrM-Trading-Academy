@@ -56,6 +56,8 @@ model User {
   lockedUntil         DateTime?
   sessionVersion      Int                          @default(1)
   passwordChangedAt   DateTime?
+  preferredLanguage   String                       @default("en")
+  lastLoginAt         DateTime?
   createdAt           DateTime                     @default(now())
   updatedAt           DateTime                     @updatedAt
   purchases           Purchase[]

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma,PrismaClient } from "@prisma/client";
 import { existsSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 
@@ -19,19 +19,22 @@ async function main(){
  const user=await db.user.findUnique({where:{normalizedEmail:email},select:{id:true,emailVerifiedAt:true,status:true,role:true}});
  if(!user||!user.emailVerifiedAt||user.status!=="ACTIVE")throw new Error("A verified active account with that email was not found.");
  if(action==="promote"){
-  await db.$transaction([
-   db.user.update({where:{id:user.id},data:{role:"ADMIN",sessionVersion:{increment:1}}}),
-   db.securityAuditLog.create({data:{userId:user.id,actorId:user.id,action:"ADMIN_PROMOTED",metadata:{source:"cli"}}})
-  ]);
+  await db.$transaction(async tx=>{
+   await tx.user.update({where:{id:user.id},data:{role:"ADMIN",sessionVersion:{increment:1}}});
+   await tx.session.updateMany({where:{userId:user.id,revokedAt:null},data:{revokedAt:new Date()}});
+   await tx.securityAuditLog.create({data:{userId:user.id,actorId:user.id,action:"ADMIN_PROMOTED",metadata:{source:"cli"}}});
+  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
   console.log("The verified account was promoted to ADMIN. Sign out and sign in again.");
   return;
  }
- const activeAdmins=await db.user.count({where:{role:"ADMIN",status:"ACTIVE"}});
- if(user.role==="ADMIN"&&activeAdmins<=1&&!has("--emergency-override"))throw new Error("Refusing to remove the final active ADMIN. Use --emergency-override only for documented recovery.");
- await db.$transaction([
-  db.user.update({where:{id:user.id},data:{role:"STUDENT",sessionVersion:{increment:1}}}),
-  db.securityAuditLog.create({data:{userId:user.id,actorId:user.id,action:"ADMIN_DEMOTED",metadata:{source:"cli",emergencyOverride:has("--emergency-override")}}})
- ]);
+ await db.$transaction(async tx=>{
+  const current=await tx.user.findUnique({where:{id:user.id},select:{role:true,status:true}});
+  const activeAdmins=await tx.user.count({where:{role:"ADMIN",status:"ACTIVE"}});
+  if(current?.role==="ADMIN"&&current.status==="ACTIVE"&&activeAdmins<=1&&!has("--emergency-override"))throw new Error("Refusing to remove the final active ADMIN. Use --emergency-override only for documented recovery.");
+  await tx.user.update({where:{id:user.id},data:{role:"STUDENT",sessionVersion:{increment:1}}});
+  await tx.session.updateMany({where:{userId:user.id,revokedAt:null},data:{revokedAt:new Date()}});
+  await tx.securityAuditLog.create({data:{userId:user.id,actorId:user.id,action:"ADMIN_DEMOTED",metadata:{source:"cli",emergencyOverride:has("--emergency-override")}}});
+ },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
  console.log("The account was demoted to STUDENT. Existing sessions were revoked.");
 }
 

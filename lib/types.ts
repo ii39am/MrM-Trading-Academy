@@ -24,4 +24,5 @@ export interface User {
   role:"STUDENT"|"INSTRUCTOR"|"ADMIN";
   status:"PENDING_VERIFICATION"|"ACTIVE"|"DISABLED"|"MIGRATION_REQUIRED";
   sessionVersion:number;
+  preferredLanguage:Locale;
 }

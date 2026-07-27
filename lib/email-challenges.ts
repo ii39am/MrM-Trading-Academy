@@ -43,7 +43,7 @@ export async function issueEmailChallenge(userId:string,email:string,purpose:Ema
   }
 }
 
-export async function registerWithEmailChallenge(name:string,email:string,passwordHash:string){
+export async function registerWithEmailChallenge(name:string,email:string,passwordHash:string,preferredLanguage:"en"|"ar"="en"){
   if(!env.EMAIL_ENABLED&&env.NODE_ENV==="production")throw new Error("EMAIL_UNAVAILABLE");
   const id=randomUUID(),code=generateCode(),expiresAt=new Date(Date.now()+lifetimeMs);
   let userId:string|null=null;
@@ -53,8 +53,8 @@ export async function registerWithEmailChallenge(name:string,email:string,passwo
         const existing=await tx.user.findUnique({where:{normalizedEmail:email}});
         if(existing?.emailVerifiedAt||existing?.status==="ACTIVE"||existing?.status==="DISABLED"||existing?.status==="MIGRATION_REQUIRED")return null;
         const user=existing
-          ?await tx.user.update({where:{id:existing.id},data:{name,passwordHash,email,failedLoginAttempts:0,lockedUntil:null}})
-          :await tx.user.create({data:{name,email,normalizedEmail:email,passwordHash,status:"PENDING_VERIFICATION"}});
+          ?await tx.user.update({where:{id:existing.id},data:{name,passwordHash,email,preferredLanguage,failedLoginAttempts:0,lockedUntil:null}})
+          :await tx.user.create({data:{name,email,normalizedEmail:email,passwordHash,preferredLanguage,status:"PENDING_VERIFICATION"}});
         const latest=await tx.emailVerificationChallenge.findFirst({where:{userId:user.id,purpose:"EMAIL_VERIFICATION"},orderBy:{createdAt:"desc"},select:{createdAt:true}});
         if(latest&&Date.now()-latest.createdAt.getTime()<60_000)throw new Error("RESEND_COOLDOWN");
         await tx.emailVerificationChallenge.updateMany({where:{userId:user.id,purpose:"EMAIL_VERIFICATION",consumedAt:null,invalidatedAt:null},data:{invalidatedAt:new Date()}});

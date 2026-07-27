@@ -25,7 +25,14 @@ describe("email account invariants",()=>{
   await db.user.create({data:{name:"Lock",email:lockEmail,normalizedEmail:lockEmail,passwordHash,emailVerifiedAt:new Date(),status:"ACTIVE"}});
   for(let index=0;index<5;index++)await userRepository.authenticate(lockEmail,"WrongPassword1");
   expect((await db.user.findUniqueOrThrow({where:{normalizedEmail:lockEmail}})).lockedUntil).not.toBeNull();
-  expect((await userRepository.authenticate(lockEmail,"SecurePass123")).reason).toBe("LOCKED");
+ expect((await userRepository.authenticate(lockEmail,"SecurePass123")).reason).toBe("LOCKED");
+ });
+ it("records the successful login time without exposing the password hash",async()=>{
+  const email=`${prefix}-login@example.test`,passwordHash=await bcrypt.hash("SecurePass123",12);
+  await db.user.create({data:{name:"Login",email,normalizedEmail:email,passwordHash,emailVerifiedAt:new Date(),status:"ACTIVE"}});
+  const result=await userRepository.authenticate(email,"SecurePass123");expect(result.reason).toBe("OK");
+  const stored=await db.user.findUniqueOrThrow({where:{normalizedEmail:email},select:{lastLoginAt:true,passwordHash:true}});
+  expect(stored.lastLoginAt).toBeInstanceOf(Date);expect(stored.passwordHash).not.toBe("SecurePass123");
  });
  it("invalidates a challenge when delivery fails",async()=>{
   const failing:EmailProvider={name:"failing",send:async()=>{throw new Error("provider unavailable")}};registerEmailProvider(failing);

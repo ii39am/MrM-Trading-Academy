@@ -28,7 +28,14 @@ Set `TRUST_PROXY=true` only when a trusted reverse proxy overwrites `X-Forwarded
 
 Use `/api/health` for liveness and `/api/ready` for readiness. Enable encrypted daily backups, point-in-time recovery, and regular restore drills.
 
-Test-only email adapters are forbidden in production. Provider setup is documented in `EMAIL_VERIFICATION.md` and `USDT_PAYMENTS.md`.
+Test-only email adapters are forbidden in production. `E2E_EMAIL_CODE` is ignored by production code and should not be configured on Netlify. Provider setup is documented in `EMAIL_VERIFICATION.md` and `USDT_PAYMENTS.md`.
+
+For Neon, preview migration status without changing data, then apply pending migrations during an approved maintenance/release step:
+
+```powershell
+npx prisma migrate status
+npx prisma migrate deploy
+```
 
 After migration, an administrator must add a valid `https://t.me/...` destination to each product before publishing it. Telegram destinations are never returned by public product APIs.
 
