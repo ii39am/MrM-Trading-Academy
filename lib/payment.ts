@@ -3,6 +3,7 @@ import { PaymentStatus,Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { getEmailProvider,paymentConfirmedEmail } from "@/lib/email";
+import { writeAudit } from "@/lib/audit";
 export interface CheckoutInput {purchaseId:string;userId:string;courseIds:string[];amountCents:number}
 export interface CheckoutSession {id:string;purchaseId:string;payAddress:string;payAmount:string;payCurrency:"usdttrc20";network:"TRC20";expiresAt:string}
 export interface VerifiedPaymentEvent {eventId:string;purchaseId:string;providerPaymentId:string;status:PaymentStatus;providerStatus:string;receivedAmount:string;payCurrency:string;network:string;transactionHash?:string;raw:unknown}
@@ -28,6 +29,12 @@ export async function processPaymentEvent(providerName:string,event:VerifiedPaym
   if(target!==purchase.status)await tx.paymentTransaction.create({data:{purchaseId:purchase.id,eventId:event.eventId,fromStatus:purchase.status,toStatus:target,payloadHash:hash}});
   if(target==="PAID")for(const item of purchase.items)await tx.enrollment.upsert({where:{userId_courseId:{userId:purchase.userId,courseId:item.courseId}},create:{userId:purchase.userId,courseId:item.courseId,purchaseId:purchase.id},update:{purchaseId:purchase.id}});
   if(target==="REFUNDED")await tx.enrollment.deleteMany({where:{purchaseId:purchase.id}});
+  if(target==="PAID")await tx.couponRedemption.updateMany({where:{purchaseId:purchase.id,status:"RESERVED"},data:{status:"REDEEMED",redeemedAt:new Date()}});
+  if(["FAILED","EXPIRED","CANCELLED"].includes(target))await tx.couponRedemption.updateMany({where:{purchaseId:purchase.id,status:"RESERVED"},data:{status:"RELEASED",releasedAt:new Date()}});
+  if(target==="REFUNDED")await tx.purchase.update({where:{id:purchase.id},data:{refundedAt:new Date()}});
+  await writeAudit({action:"PAYMENT_STATUS_CHANGED",targetUserId:purchase.userId,entityType:"Purchase",entityId:purchase.id,category:"PAYMENT",metadata:{purchaseId:purchase.id,fromStatus:purchase.status,toStatus:target}},tx);
+  if(target==="PAID")await writeAudit({action:"PURCHASE_GRANTED",targetUserId:purchase.userId,entityType:"Purchase",entityId:purchase.id,category:"ACCESS",metadata:{purchaseId:purchase.id}},tx);
+  if(target==="REFUNDED")await writeAudit({action:"PURCHASE_REVOKED",targetUserId:purchase.userId,entityType:"Purchase",entityId:purchase.id,category:"ACCESS",metadata:{purchaseId:purchase.id}},tx);
   await tx.webhookEvent.update({where:{id:event.eventId},data:{processedAt:new Date()}});
   return {duplicate:false,status:target,email:purchase.user.email,products:purchase.items.map(item=>item.course.titleEn)};
  });

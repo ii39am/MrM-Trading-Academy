@@ -32,6 +32,9 @@ enum UserStatus {
   PENDING_VERIFICATION
   ACTIVE
   DISABLED
+  SUSPENDED
+  DELETION_PENDING
+  DELETED
   MIGRATION_REQUIRED
 }
 
@@ -39,6 +42,29 @@ enum EmailChallengePurpose {
   EMAIL_VERIFICATION
   PASSWORD_RESET
   EMAIL_CHANGE
+}
+
+enum LoginEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  LOGOUT
+  PASSWORD_RESET
+  PASSWORD_CHANGED
+  EMAIL_CHANGED
+  SESSION_REVOKED
+  ACCOUNT_SUSPENDED
+  ACCOUNT_REACTIVATED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum CouponRedemptionStatus {
+  RESERVED
+  REDEEMED
+  RELEASED
 }
 
 model User {
@@ -58,23 +84,34 @@ model User {
   passwordChangedAt   DateTime?
   preferredLanguage   String                       @default("en")
   lastLoginAt         DateTime?
+  deletionRequestedAt DateTime?
+  deletedAt           DateTime?
+  deletedByUserId     String?
+  deletionReason      String?
+  anonymizedAt        DateTime?
   createdAt           DateTime                     @default(now())
   updatedAt           DateTime                     @updatedAt
   purchases           Purchase[]
   enrollments         Enrollment[]
   emailChallenges     EmailVerificationChallenge[]
   sessions            Session[]
+  loginEvents         LoginEvent[]
+  couponRedemptions   CouponRedemption[]
+  createdCoupons      Coupon[]                     @relation("CouponCreator")
   auditLogs           SecurityAuditLog[]           @relation("AuditSubject")
   actorAuditLogs      SecurityAuditLog[]           @relation("AuditActor")
   instructedCourses   Course[]                     @relation("CourseInstructor")
 
   @@index([status, role])
   @@index([lockedUntil])
+  @@index([createdAt])
+  @@index([lastLoginAt])
+  @@index([deletionRequestedAt])
 }
 
 model Course {
-  id                    String         @id @default(cuid())
-  slug                  String         @unique
+  id                    String          @id @default(cuid())
+  slug                  String          @unique
   titleEn               String
   titleAr               String
   shortDescriptionEn    String
@@ -84,51 +121,63 @@ model Course {
   instructor            String
   instructorId          String?
   priceCents            Int
-  currency              String         @default("USD")
+  currency              String          @default("USD")
   image                 String
   accent                String
   telegramAccessUrl     String?
   telegramButtonLabelEn String?
   telegramButtonLabelAr String?
-  status                CourseStatus   @default(DRAFT)
+  status                CourseStatus    @default(DRAFT)
   publishedAt           DateTime?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
   purchaseItems         PurchaseItem[]
   enrollments           Enrollment[]
-  instructorUser        User?          @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
+  couponProducts        CouponProduct[]
+  instructorUser        User?           @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
 
   @@index([status, publishedAt])
   @@index([instructorId])
 }
 
 model Purchase {
-  id                String               @id @default(cuid())
-  userId            String
-  provider          String
-  providerSessionId String               @unique
-  status            PaymentStatus        @default(PENDING)
-  amountCents       Int
-  currency          String
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  paidAt            DateTime?
-  providerPaymentId String?              @unique
-  expectedAmount    Decimal?             @db.Decimal(30, 12)
-  receivedAmount    Decimal?             @db.Decimal(30, 12)
-  payCurrency       String?
-  network           String?
-  paymentAddress    String?
-  transactionHash   String?
-  providerStatus    String?
-  expiresAt         DateTime?
-  rawWebhookHash    String?
-  user              User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
-  items             PurchaseItem[]
-  transactions      PaymentTransaction[]
-  enrollments       Enrollment[]
+  id                  String               @id @default(cuid())
+  userId              String
+  provider            String
+  providerSessionId   String               @unique
+  status              PaymentStatus        @default(PENDING)
+  amountCents         Int
+  currency            String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  paidAt              DateTime?
+  providerPaymentId   String?              @unique
+  expectedAmount      Decimal?             @db.Decimal(30, 12)
+  receivedAmount      Decimal?             @db.Decimal(30, 12)
+  payCurrency         String?
+  network             String?
+  paymentAddress      String?
+  transactionHash     String?
+  providerStatus      String?
+  expiresAt           DateTime?
+  rawWebhookHash      String?
+  originalAmountCents Int                  @default(0)
+  discountAmountCents Int                  @default(0)
+  couponId            String?
+  refundedAmountCents Int                  @default(0)
+  refundedAt          DateTime?
+  refundReference     String?
+  refundAdminNote     String?
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items               PurchaseItem[]
+  transactions        PaymentTransaction[]
+  enrollments         Enrollment[]
+  coupon              Coupon?              @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  couponRedemption    CouponRedemption?
 
   @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([couponId, status])
 }
 
 model PurchaseItem {
@@ -217,28 +266,128 @@ model EmailVerificationChallenge {
 }
 
 model Session {
-  id        String    @id
-  userId    String
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String    @id
+  publicId         String    @unique @default(uuid())
+  userId           String
+  expiresAt        DateTime
+  lastSeenAt       DateTime  @default(now())
+  revokedAt        DateTime?
+  revocationReason String?
+  userAgentSummary String?
+  deviceType       String?
+  browser          String?
+  operatingSystem  String?
+  ipHash           String?
+  maskedIp         String?
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt, expiresAt])
+  @@index([expiresAt])
+  @@index([lastSeenAt])
 }
 
 model SecurityAuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  actorId   String?
-  action    String
-  ipHash    String?
-  metadata  Json?
-  createdAt DateTime @default(now())
-  user      User?    @relation("AuditSubject", fields: [userId], references: [id], onDelete: SetNull)
-  actor     User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  id               String    @id @default(cuid())
+  userId           String?
+  actorId          String?
+  actorRole        UserRole?
+  action           String
+  category         String?
+  entityType       String?
+  entityId         String?
+  targetUserId     String?
+  ipHash           String?
+  userAgentSummary String?
+  metadata         Json?
+  createdAt        DateTime  @default(now())
+  user             User?     @relation("AuditSubject", fields: [userId], references: [id], onDelete: SetNull)
+  actor            User?     @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([actorId, createdAt])
   @@index([action, createdAt])
+  @@index([targetUserId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([createdAt])
+}
+
+model LoginEvent {
+  id                String         @id @default(cuid())
+  userId            String?
+  eventType         LoginEventType
+  success           Boolean
+  ipHash            String?
+  ipDisplayMasked   String?
+  userAgentSummary  String?
+  deviceType        String?
+  browser           String?
+  operatingSystem   String?
+  countryCode       String?
+  city              String?
+  failureReasonCode String?
+  createdAt         DateTime       @default(now())
+  user              User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([eventType, createdAt])
+  @@index([createdAt])
+}
+
+model Coupon {
+  id                    String             @id @default(cuid())
+  code                  String
+  normalizedCode        String             @unique
+  descriptionEn         String
+  descriptionAr         String
+  discountType          DiscountType
+  discountValue         Int
+  currency              String?
+  active                Boolean            @default(true)
+  startsAt              DateTime?
+  expiresAt             DateTime?
+  totalUsageLimit       Int?
+  perUserUsageLimit     Int?
+  minimumOrderAmount    Int                @default(0)
+  maximumDiscountAmount Int?
+  createdByUserId       String
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  createdBy             User               @relation("CouponCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  products              CouponProduct[]
+  redemptions           CouponRedemption[]
+  purchases             Purchase[]
+
+  @@index([active, startsAt, expiresAt])
+  @@index([createdAt])
+}
+
+model CouponProduct {
+  couponId String
+  courseId String
+  coupon   Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([couponId, courseId])
+  @@index([courseId])
+}
+
+model CouponRedemption {
+  id             String                 @id @default(cuid())
+  couponId       String
+  userId         String
+  purchaseId     String                 @unique
+  discountAmount Int
+  status         CouponRedemptionStatus @default(RESERVED)
+  reservedAt     DateTime               @default(now())
+  expiresAt      DateTime
+  redeemedAt     DateTime?
+  releasedAt     DateTime?
+  coupon         Coupon                 @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  purchase       Purchase               @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+
+  @@index([couponId, status, expiresAt])
+  @@index([userId, couponId, status])
+  @@index([expiresAt, status])
 }

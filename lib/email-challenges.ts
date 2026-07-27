@@ -67,7 +67,7 @@ export async function registerWithEmailChallenge(name:string,email:string,passwo
       throw error;
     }
   }
-  if(!userId)return;
+  if(!userId)return null;
   try{
     const template=verificationEmail(code,"EMAIL_VERIFICATION");
     await getEmailProvider().send({to:email,...template});
@@ -75,6 +75,7 @@ export async function registerWithEmailChallenge(name:string,email:string,passwo
     await db.emailVerificationChallenge.updateMany({where:{id},data:{invalidatedAt:new Date()}});
     throw error;
   }
+  return userId;
 }
 
 export async function consumeEmailChallenge(email:string,purpose:EmailChallengePurpose,code:string){

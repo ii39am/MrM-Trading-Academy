@@ -12,5 +12,5 @@ export async function POST(request:Request){
  const email=normalizeEmail(parsed.data.email);
  const emailRate=await enforceRateLimit(identifierKey("verify-email",email),6,15*60_000);if(!emailRate.allowed)return rateLimited(emailRate.retryAfter);
  const record=await activateEmailWithChallenge(email,parsed.data.code);if(!record)return errorResponse("VERIFICATION_FAILED","Invalid or expired verification code.",400);
- const user=publicUser(record);await createSession(user);return Response.json({user});
+ const user=publicUser(record);await createSession(user,request);return Response.json({user});
 }

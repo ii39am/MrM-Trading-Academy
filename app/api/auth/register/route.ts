@@ -3,6 +3,7 @@ import { z } from "zod";
 import { normalizeEmail,registerWithEmailChallenge } from "@/lib/email-challenges";
 import { clientKey,enforceRateLimit,errorResponse,identifierKey,rateLimited,verifySameOrigin } from "@/lib/security";
 import { getLocale } from "@/lib/i18n";
+import { writeAudit } from "@/lib/audit";
 
 const schema=z.object({
  name:z.string().trim().min(2).max(60).regex(/^[\p{L}\p{M}' -]+$/u),
@@ -20,7 +21,8 @@ export async function POST(request:Request){
  const email=normalizeEmail(parsed.data.email);
  const emailRate=await enforceRateLimit(identifierKey("register-email",email),3,60*60_000);if(!emailRate.allowed)return rateLimited(emailRate.retryAfter);
  try{
-  await registerWithEmailChallenge(parsed.data.name,email,await bcrypt.hash(parsed.data.password,12),await getLocale());
+  const userId=await registerWithEmailChallenge(parsed.data.name,email,await bcrypt.hash(parsed.data.password,12),await getLocale());
+  if(userId)await writeAudit({action:"USER_REGISTERED",targetUserId:userId,entityType:"User",entityId:userId,category:"ACCOUNT",request});
  }catch(error){
   if(error instanceof Error&&error.message==="RESEND_COOLDOWN")return Response.json({ok:true,message:generic},{status:202});
   return errorResponse("SERVICE_UNAVAILABLE","Verification email could not be sent. Try again later.",503);

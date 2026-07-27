@@ -22,7 +22,7 @@ export interface User {
   email:string;
   emailVerified:boolean;
   role:"STUDENT"|"INSTRUCTOR"|"ADMIN";
-  status:"PENDING_VERIFICATION"|"ACTIVE"|"DISABLED"|"MIGRATION_REQUIRED";
+  status:"PENDING_VERIFICATION"|"ACTIVE"|"DISABLED"|"SUSPENDED"|"DELETION_PENDING"|"DELETED"|"MIGRATION_REQUIRED";
   sessionVersion:number;
   preferredLanguage:Locale;
 }
