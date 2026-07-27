@@ -4,6 +4,7 @@ import { normalizeEmail,registerWithEmailChallenge } from "@/lib/email-challenge
 import { clientKey,enforceRateLimit,errorResponse,identifierKey,rateLimited,verifySameOrigin } from "@/lib/security";
 import { getLocale } from "@/lib/i18n";
 import { writeAudit } from "@/lib/audit";
+import { emailFailureDetails } from "@/lib/email";
 
 const schema=z.object({
  name:z.string().trim().min(2).max(60).regex(/^[\p{L}\p{M}' -]+$/u),
@@ -25,6 +26,7 @@ export async function POST(request:Request){
   if(userId)await writeAudit({action:"USER_REGISTERED",targetUserId:userId,entityType:"User",entityId:userId,category:"ACCOUNT",request});
  }catch(error){
   if(error instanceof Error&&error.message==="RESEND_COOLDOWN")return Response.json({ok:true,message:generic},{status:202});
+  console.error("Registration verification email failed",emailFailureDetails("registration_verification_email",error));
   return errorResponse("SERVICE_UNAVAILABLE","Verification email could not be sent. Try again later.",503);
  }
  return Response.json({ok:true,message:generic},{status:202});

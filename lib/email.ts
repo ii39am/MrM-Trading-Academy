@@ -10,9 +10,33 @@ export interface EmailProvider {
   send(message:TransactionalEmail):Promise<void>;
 }
 
+export type EmailFailureDetails={
+  operation:string;
+  statusCode?:number;
+  errorName:string;
+  errorMessage:string;
+  providerCode?:string;
+  providerType?:string;
+  requestId?:string;
+};
+
+export function emailFailureDetails(operation:string,error:unknown):EmailFailureDetails{
+  if(error&&typeof error==="object"&&"safeDetails" in error){
+    const details=(error as {safeDetails?:Omit<EmailFailureDetails,"operation">}).safeDetails;
+    if(details)return {operation,...details};
+  }
+  return {
+    operation,
+    errorName:error instanceof Error?error.name:"UnknownEmailError",
+    errorMessage:error instanceof Error?error.message:"Email delivery failed"
+  };
+}
+
 const registry=globalThis as typeof globalThis&{__academyEmailProvider?:EmailProvider};
 
-export function registerEmailProvider(provider:EmailProvider){registry.__academyEmailProvider=provider}
+export function registerEmailProvider(provider:EmailProvider){
+  registry.__academyEmailProvider=provider;
+}
 export function getEmailProvider(){
   if(!registry.__academyEmailProvider)throw new Error("Email provider is not configured");
   return registry.__academyEmailProvider;
