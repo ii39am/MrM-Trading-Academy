@@ -1,0 +1,6 @@
+"use client";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import type { Locale } from "@/lib/types";
+import { Button,Spinner } from "@/components/ui";
+export function PurchaseButton({courseId,locale}:{courseId:string;locale:Locale}){const router=useRouter(),[busy,setBusy]=useState(false),[error,setError]=useState("");async function purchase(){if(busy)return;setBusy(true);setError("");try{const response=await fetch("/api/purchase",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({courseIds:[courseId]})});if(response.status===401){router.push(`/login?next=${encodeURIComponent(location.pathname)}`);return}const body=await response.json();if(!response.ok)throw new Error(body.error?.message??"Payment is unavailable");router.push(`/dashboard/purchases/${body.purchaseId}`)}catch(cause){setError(cause instanceof Error?cause.message:"Payment is unavailable")}finally{setBusy(false)}}return <div className="mt-6"><Button onClick={purchase} disabled={busy} className="w-full">{busy&&<Spinner/>}{locale==="ar"?"ابدأ الدفع الآمن":"Continue to secure payment"}</Button>{error&&<p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}</div>}

@@ -1,0 +1,2 @@
+import { PrismaClient } from "@prisma/client";
+export default async function teardown(){const db=new PrismaClient();const purchase=await db.purchase.findUnique({where:{providerSessionId:"e2e-paid"},select:{id:true}});if(purchase){await db.enrollment.deleteMany({where:{purchaseId:purchase.id}});await db.purchase.delete({where:{id:purchase.id}})}await db.course.deleteMany({where:{id:"e2e-product-mrme",slug:"e2e-private-access"}});await db.user.deleteMany({where:{normalizedEmail:{in:["enrolled@example.test","admin@example.test"]}}});await db.$disconnect()}

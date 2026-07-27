@@ -3,6 +3,7 @@ import type { EmailChallengePurpose } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getEmailProvider,verificationEmail } from "@/lib/email";
 import { Prisma } from "@prisma/client";
+import { env } from "@/lib/env";
 
 const lifetimeMs=10*60_000;
 export function normalizeEmail(value:string){
@@ -25,6 +26,7 @@ function generateCode(){
 }
 
 export async function issueEmailChallenge(userId:string,email:string,purpose:EmailChallengePurpose){
+  if(!env.EMAIL_ENABLED&&env.NODE_ENV==="production")throw new Error("EMAIL_UNAVAILABLE");
   const id=randomUUID(),code=generateCode(),expiresAt=new Date(Date.now()+lifetimeMs);
   await db.$transaction(async tx=>{
     const latest=await tx.emailVerificationChallenge.findFirst({where:{userId,purpose},orderBy:{createdAt:"desc"},select:{createdAt:true}});
@@ -42,6 +44,7 @@ export async function issueEmailChallenge(userId:string,email:string,purpose:Ema
 }
 
 export async function registerWithEmailChallenge(name:string,email:string,passwordHash:string){
+  if(!env.EMAIL_ENABLED&&env.NODE_ENV==="production")throw new Error("EMAIL_UNAVAILABLE");
   const id=randomUUID(),code=generateCode(),expiresAt=new Date(Date.now()+lifetimeMs);
   let userId:string|null=null;
   for(let attempt=0;attempt<2;attempt++){

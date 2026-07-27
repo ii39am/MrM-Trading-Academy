@@ -27,4 +27,4 @@ The command refuses to remove the final active ADMIN. `--emergency-override` byp
 
 Role changes are transactional, increment `sessionVersion`, and create security audit events. No default administrator or password is created.
 
-`/admin` requires ADMIN and displays live database records. `/admin/videos` also permits INSTRUCTOR, but only for courses whose `Course.instructorId` matches the current user. Every admin API repeats the database-backed role and object-ownership check.
+`/admin` requires ADMIN and displays live database records. `/admin/products` manages bilingual product content, server-only Telegram destinations, publication, and pricing. Every admin API repeats the database-backed ADMIN check.

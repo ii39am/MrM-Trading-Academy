@@ -1,0 +1,19 @@
+import Link from "next/link";
+import { redirect,notFound } from "next/navigation";
+import { CheckCircle2,Clock3,RefreshCw,TriangleAlert } from "lucide-react";
+import { getSessionUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { getLocale } from "@/lib/i18n";
+import { Button } from "@/components/ui";
+
+export const metadata={robots:{index:false,follow:false}};
+export const dynamic="force-dynamic";
+export default async function PurchaseAccess({params}:{params:Promise<{purchaseId:string}>}){
+ const user=await getSessionUser(),locale=await getLocale();if(!user)redirect(`/login?next=/dashboard/purchases/${encodeURIComponent((await params).purchaseId)}`);
+ const purchase=await db.purchase.findFirst({where:{id:(await params).purchaseId,userId:user.id},include:{items:{include:{course:true}}}});if(!purchase)notFound();
+ const product=purchase.items[0]?.course;if(!product)notFound();
+ const title=purchase.items.map(item=>locale==="ar"?item.course.titleAr:item.course.titleEn).join(" + "),isPaid=purchase.status==="PAID";
+ const copy=locale==="ar"?{back:"العودة إلى مشترياتي",paid:"تم تأكيد الدفع",pending:"الدفع قيد التأكيد",failed:"لم تكتمل عملية الدفع",paidBody:"تم تفعيل وصولك الخاص. استخدم الأزرار أدناه للانضمام إلى تيليجرام.",pendingBody:"سيظهر الوصول تلقائياً بعد تأكيد الدفع من مزود الخدمة.",failedBody:"لم يتم منح أي وصول. يمكنك العودة إلى صفحة المنتج والمحاولة مجدداً.",refresh:"تحديث الحالة",retry:"المحاولة مجدداً",support:"تواصل مع الدعم"}:{back:"Back to purchases",paid:"Payment confirmed",pending:"Payment is being confirmed",failed:"Payment was not completed",paidBody:"Your private access is active. Use the secure buttons below to join Telegram.",pendingBody:"Access will appear automatically after the payment provider confirms your payment.",failedBody:"No access has been granted. Return to the product page to try again.",refresh:"Refresh status",retry:"Try again",support:"Contact support"};
+ const terminal=["FAILED","EXPIRED","CANCELLED","REFUNDED"].includes(purchase.status);
+ return <div className="container-pad min-h-[75vh] pt-28 pb-20"><Link href="/dashboard" className="text-sm text-white/45 hover:text-white">← {copy.back}</Link><div className="mx-auto mt-10 max-w-2xl rounded-3xl border border-white/10 bg-white/[.035] p-8 shadow-2xl shadow-black/30 sm:p-10">{isPaid?<CheckCircle2 className="h-10 w-10 text-emerald-400"/>:terminal?<TriangleAlert className="h-10 w-10 text-amber-400"/>:<Clock3 className="h-10 w-10 text-blue-400"/>}<p className="mt-6 text-sm text-blue-300">{title}</p><h1 className="mt-2 text-3xl font-semibold">{isPaid?copy.paid:terminal?copy.failed:copy.pending}</h1><p className="mt-4 leading-7 text-white/50">{isPaid?copy.paidBody:terminal?copy.failedBody:copy.pendingBody}</p>{!isPaid&&!terminal&&purchase.paymentAddress&&<div className="mt-6 rounded-xl border border-white/10 bg-black/20 p-4"><p className="text-xs text-white/35">{purchase.payCurrency?.toUpperCase()} · {purchase.network}</p><p className="mt-2 break-all font-mono text-sm">{purchase.paymentAddress}</p><p className="mt-2 text-sm text-white/55">{purchase.expectedAmount?.toString()} {purchase.payCurrency?.toUpperCase()}</p></div>}<div className="mt-8 flex flex-wrap gap-3">{isPaid?purchase.items.filter(item=>item.course.status==="PUBLISHED"&&item.course.publishedAt&&item.course.publishedAt<=new Date()).map(item=><Button key={item.courseId} href={`/api/purchases/${purchase.id}/access?courseId=${encodeURIComponent(item.courseId)}`}>{locale==="ar"?(item.course.telegramButtonLabelAr??"الانضمام إلى تيليجرام"):(item.course.telegramButtonLabelEn??"Join Telegram")}</Button>):terminal?<Button href={`/courses/${product.slug}`}>{copy.retry}</Button>:<Button href={`/dashboard/purchases/${purchase.id}`}><RefreshCw className="h-4 w-4"/>{copy.refresh}</Button>}<Button href="/contact" variant="secondary">{copy.support}</Button></div></div></div>;
+}

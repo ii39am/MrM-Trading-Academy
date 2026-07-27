@@ -6,7 +6,7 @@ Required production settings:
 
 ```text
 EMAIL_PROVIDER=resend
-EMAIL_FROM=Mr.M Trading Academy <academy@example.com>
+EMAIL_FROM=Mr.ME Trading Academy <academy@example.com>
 RESEND_API_KEY=...
 APP_URL=https://academy.example.com
 ```
