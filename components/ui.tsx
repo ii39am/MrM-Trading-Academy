@@ -1,55 +1,29 @@
 "use client";
-
 import Link from "next/link";
 import * as Accordion from "@radix-ui/react-accordion";
-import { ChevronDown, ArrowRight, LoaderCircle } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowRight,ChevronDown,Inbox,LoaderCircle } from "lucide-react";
+import { motion,useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-export function Button({ href, children, variant = "primary", className = "", type, disabled, onClick }: { href?: string; children: React.ReactNode; variant?: "primary" | "secondary" | "ghost"; className?: string; type?: "button" | "submit"; disabled?: boolean; onClick?:()=>void }) {
-  const styles = cn("inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50",
-    variant === "primary" && "bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500",
-    variant === "secondary" && "border border-white/10 bg-white/[.06] text-white hover:bg-white/10",
-    variant === "ghost" && "text-white/65 hover:bg-white/5 hover:text-white", className);
-  return href ? <Link href={href} className={styles}>{children}</Link> : <button type={type ?? "button"} disabled={disabled} onClick={onClick} className={styles}>{children}</button>;
+type ButtonVariant="primary"|"secondary"|"ghost"|"outline"|"destructive";
+export function Button({href,children,variant="primary",className,type,disabled,onClick}:{href?:string;children:React.ReactNode;variant?:ButtonVariant;className?:string;type?:"button"|"submit";disabled?:boolean;onClick?:()=>void}){
+ const styles=cn("inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09070f] disabled:pointer-events-none disabled:opacity-45",
+ variant==="primary"&&"bg-violet-600 text-white shadow-[0_10px_30px_rgba(124,58,237,.25)] hover:bg-violet-500 active:bg-violet-700",
+ variant==="secondary"&&"border border-violet-200/15 bg-violet-100/[.07] text-violet-50 hover:border-violet-200/25 hover:bg-violet-100/[.11]",
+ variant==="ghost"&&"text-violet-100/65 hover:bg-violet-100/[.06] hover:text-white",
+ variant==="outline"&&"border border-violet-400/35 bg-transparent text-violet-200 hover:bg-violet-500/10 hover:text-white",
+ variant==="destructive"&&"border border-red-400/25 bg-red-500/12 text-red-200 hover:bg-red-500/20",className);
+ return href?<Link href={href} className={styles}>{children}</Link>:<button type={type??"button"} disabled={disabled} onClick={onClick} className={styles}>{children}</button>;
 }
-
-export function Reveal({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
-  return <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ duration: .55, delay, ease: [0.22, 1, 0.36, 1] }} className={className}>{children}</motion.div>;
-}
-
-export function FAQ({ items }: { items: { q: string; a: string }[] }) {
-  return (
-    <Accordion.Root type="single" collapsible className="divide-y divide-white/10">
-      {items.map((item, index) => (
-        <Accordion.Item value={`item-${index}`} key={item.q}>
-          <Accordion.Header>
-            <Accordion.Trigger className="group flex w-full items-center justify-between py-6 text-left font-medium text-white">
-              {item.q}<ChevronDown className="h-4 w-4 text-white/40 transition group-data-[state=open]:rotate-180" />
-            </Accordion.Trigger>
-          </Accordion.Header>
-          <Accordion.Content className="overflow-hidden text-sm leading-7 text-white/55 data-[state=closed]:animate-none">
-            <div className="pb-6 pr-10">{item.a}</div>
-          </Accordion.Content>
-        </Accordion.Item>
-      ))}
-    </Accordion.Root>
-  );
-}
-
-export function SectionHeading({ eyebrow, title, copy, align = "left" }: { eyebrow: string; title: string; copy?: string; align?: "left" | "center" }) {
-  return <div className={cn(align === "center" && "mx-auto text-center")}>
-    <p className="eyebrow">{eyebrow}</p><h2 className={cn("section-title", align === "center" && "mx-auto")}>{title}</h2>
-    {copy && <p className={cn("mt-5 max-w-2xl text-base leading-7 text-white/55", align === "center" && "mx-auto")}>{copy}</p>}
-  </div>;
-}
-
-export function LoadingSkeleton() {
-  return <div className="grid gap-6 md:grid-cols-3">{[0,1,2].map(i => <div key={i} className="h-[420px] animate-pulse rounded-3xl bg-white/[.05]" />)}</div>;
-}
-
-export function EmptyState({ title, copy }: { title: string; copy: string }) {
-  return <div className="glass rounded-3xl px-6 py-16 text-center"><h3 className="text-xl font-semibold">{title}</h3><p className="mx-auto mt-2 max-w-md text-sm text-white/50">{copy}</p><Button href="/courses" variant="secondary" className="mt-6">Browse courses <ArrowRight className="h-4 w-4"/></Button></div>;
-}
-
-export function Spinner() { return <LoaderCircle className="h-4 w-4 animate-spin" />; }
+export function Reveal({children,className,delay=0}:{children:React.ReactNode;className?:string;delay?:number}){const reduced=useReducedMotion();return <motion.div initial={reduced?false:{opacity:0,y:14}} whileInView={{opacity:1,y:0}} viewport={{once:true,margin:"-40px"}} transition={{duration:.45,delay,ease:[.22,1,.36,1]}} className={className}>{children}</motion.div>}
+export function Card({children,className}:{children:React.ReactNode;className?:string}){return <div className={cn("surface",className)}>{children}</div>}
+export function Badge({children,tone="neutral"}:{children:React.ReactNode;tone?:"neutral"|"success"|"warning"|"danger"|"purple"}){return <span className={cn("inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",tone==="neutral"&&"border-white/10 bg-white/5 text-white/60",tone==="purple"&&"border-violet-400/20 bg-violet-500/10 text-violet-200",tone==="success"&&"border-emerald-400/20 bg-emerald-500/10 text-emerald-300",tone==="warning"&&"border-amber-400/20 bg-amber-500/10 text-amber-200",tone==="danger"&&"border-red-400/20 bg-red-500/10 text-red-200")}>{children}</span>}
+export function StatusBadge({status}:{status:string}){const s=status.toUpperCase(),tone=s==="PAID"||s==="ACTIVE"||s==="VERIFIED"?"success":s==="FAILED"||s==="SUSPENDED"||s==="DELETED"?"danger":s==="PENDING"||s==="UNVERIFIED"||s==="DELETION_PENDING"?"warning":s==="REFUNDED"?"purple":"neutral";return <Badge tone={tone}>{s.replaceAll("_"," ")}</Badge>}
+export function Alert({children,tone="info"}:{children:React.ReactNode;tone?:"info"|"success"|"error"}){return <div role={tone==="error"?"alert":"status"} className={cn("rounded-xl border p-4 text-sm leading-6",tone==="info"&&"border-violet-400/20 bg-violet-500/10 text-violet-100/80",tone==="success"&&"border-emerald-400/20 bg-emerald-500/10 text-emerald-200",tone==="error"&&"border-red-400/20 bg-red-500/10 text-red-200")}>{children}</div>}
+export function FAQ({items}:{items:{q:string;a:string}[]}){return <Accordion.Root type="single" collapsible className="surface divide-y divide-violet-200/10 px-5 sm:px-7">{items.map((item,index)=><Accordion.Item value={`item-${index}`} key={item.q}><Accordion.Header><Accordion.Trigger className="group flex min-h-16 w-full items-center justify-between gap-4 py-5 text-start font-medium text-white"><span>{item.q}</span><ChevronDown className="h-4 w-4 shrink-0 text-violet-300 transition group-data-[state=open]:rotate-180"/></Accordion.Trigger></Accordion.Header><Accordion.Content className="overflow-hidden text-sm leading-7 text-violet-100/55"><div className="pb-6 pe-8">{item.a}</div></Accordion.Content></Accordion.Item>)}</Accordion.Root>}
+export function SectionHeading({eyebrow,title,copy,align="left"}:{eyebrow:string;title:string;copy?:string;align?:"left"|"center"}){return <div className={cn(align==="center"&&"mx-auto text-center")}><p className="eyebrow">{eyebrow}</p><h2 className={cn("section-title",align==="center"&&"mx-auto")}>{title}</h2>{copy&&<p className={cn("mt-5 max-w-2xl text-base leading-8 text-violet-100/55",align==="center"&&"mx-auto")}>{copy}</p>}</div>}
+export function PageHeader({eyebrow,title,copy,actions}:{eyebrow:string;title:string;copy?:string;actions?:React.ReactNode}){return <header className="flex flex-col gap-6 border-b border-violet-200/10 pb-8 sm:flex-row sm:items-end sm:justify-between"><div><p className="eyebrow">{eyebrow}</p><h1 className="mt-3 text-3xl font-semibold tracking-[-.03em] sm:text-4xl">{title}</h1>{copy&&<p className="mt-3 max-w-2xl text-sm leading-7 text-violet-100/50">{copy}</p>}</div>{actions&&<div className="flex flex-wrap gap-2">{actions}</div>}</header>}
+export function MetricCard({label,value,detail}:{label:string;value:React.ReactNode;detail?:string}){return <div className="surface p-5"><p className="text-sm text-violet-100/45">{label}</p><p className="mt-3 text-2xl font-semibold tracking-tight">{value}</p>{detail&&<p className="mt-2 text-xs text-violet-100/35">{detail}</p>}</div>}
+export function LoadingSkeleton(){return <div className="grid gap-5 md:grid-cols-3" aria-label="Loading">{[0,1,2].map(i=><div key={i} className="h-80 animate-pulse rounded-3xl border border-violet-200/[.08] bg-violet-200/[.04]"/>)}</div>}
+export function EmptyState({title,copy,href="/courses",action="Browse courses"}:{title:string;copy:string;href?:string;action?:string}){return <div className="surface px-5 py-14 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-300"><Inbox className="h-5 w-5"/></span><h3 className="mt-5 text-xl font-semibold">{title}</h3><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-violet-100/50">{copy}</p><Button href={href} variant="secondary" className="mt-6">{action}<ArrowRight className="h-4 w-4 rtl:-scale-x-100"/></Button></div>}
+export function Spinner(){return <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true"/>}

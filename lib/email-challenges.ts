@@ -70,7 +70,8 @@ export async function registerWithEmailChallenge(name:string,email:string,passwo
   if(!userId)return null;
   try{
     const template=verificationEmail(code,"EMAIL_VERIFICATION");
-    await getEmailProvider().send({to:email,...template});
+    const provider=getEmailProvider();
+    await provider.send({to:email,...template});
   }catch(error){
     await db.emailVerificationChallenge.updateMany({where:{id},data:{invalidatedAt:new Date()}});
     throw error;
