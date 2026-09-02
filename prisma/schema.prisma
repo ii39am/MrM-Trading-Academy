@@ -22,6 +22,11 @@ enum PaymentStatus {
   CANCELLED
 }
 
+enum PaymentUpdateSource {
+  WEBHOOK
+  RECONCILIATION
+}
+
 enum UserRole {
   STUDENT
   INSTRUCTOR
@@ -67,6 +72,15 @@ enum CouponRedemptionStatus {
   RELEASED
 }
 
+enum CourseAccessGrantStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  REDEEMED
+  REVOKED
+  FAILED
+}
+
 model User {
   id                  String                       @id @default(cuid())
   name                String
@@ -101,6 +115,7 @@ model User {
   auditLogs           SecurityAuditLog[]           @relation("AuditSubject")
   actorAuditLogs      SecurityAuditLog[]           @relation("AuditActor")
   instructedCourses   Course[]                     @relation("CourseInstructor")
+  courseAccessGrants  CourseAccessGrant[]
 
   @@index([status, role])
   @@index([lockedUntil])
@@ -110,8 +125,8 @@ model User {
 }
 
 model Course {
-  id                    String          @id @default(cuid())
-  slug                  String          @unique
+  id                    String              @id @default(cuid())
+  slug                  String              @unique
   titleEn               String
   titleAr               String
   shortDescriptionEn    String
@@ -121,63 +136,72 @@ model Course {
   instructor            String
   instructorId          String?
   priceCents            Int
-  currency              String          @default("USD")
+  currency              String              @default("USD")
   image                 String
   accent                String
   telegramAccessUrl     String?
+  telegramChatId        String?
+  telegramAccessEnabled Boolean             @default(false)
   telegramButtonLabelEn String?
   telegramButtonLabelAr String?
-  status                CourseStatus    @default(DRAFT)
+  status                CourseStatus        @default(DRAFT)
   publishedAt           DateTime?
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
   purchaseItems         PurchaseItem[]
   enrollments           Enrollment[]
   couponProducts        CouponProduct[]
-  instructorUser        User?           @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
+  accessGrants          CourseAccessGrant[]
+  instructorUser        User?               @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
 
   @@index([status, publishedAt])
   @@index([instructorId])
 }
 
 model Purchase {
-  id                  String               @id @default(cuid())
-  userId              String
-  provider            String
-  providerSessionId   String               @unique
-  status              PaymentStatus        @default(PENDING)
-  amountCents         Int
-  currency            String
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  paidAt              DateTime?
-  providerPaymentId   String?              @unique
-  expectedAmount      Decimal?             @db.Decimal(30, 12)
-  receivedAmount      Decimal?             @db.Decimal(30, 12)
-  payCurrency         String?
-  network             String?
-  paymentAddress      String?
-  transactionHash     String?
-  providerStatus      String?
-  expiresAt           DateTime?
-  rawWebhookHash      String?
-  originalAmountCents Int                  @default(0)
-  discountAmountCents Int                  @default(0)
-  couponId            String?
-  refundedAmountCents Int                  @default(0)
-  refundedAt          DateTime?
-  refundReference     String?
-  refundAdminNote     String?
-  user                User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
-  items               PurchaseItem[]
-  transactions        PaymentTransaction[]
-  enrollments         Enrollment[]
-  coupon              Coupon?              @relation(fields: [couponId], references: [id], onDelete: Restrict)
-  couponRedemption    CouponRedemption?
+  id                      String               @id @default(cuid())
+  userId                  String
+  provider                String
+  providerSessionId       String               @unique
+  status                  PaymentStatus        @default(PENDING)
+  amountCents             Int
+  currency                String
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  paidAt                  DateTime?
+  providerPaymentId       String?              @unique
+  expectedAmount          Decimal?             @db.Decimal(30, 12)
+  receivedAmount          Decimal?             @db.Decimal(30, 12)
+  payCurrency             String?
+  network                 String?
+  paymentAddress          String?
+  transactionHash         String?
+  providerStatus          String?
+  expiresAt               DateTime?
+  rawWebhookHash          String?
+  originalAmountCents     Int                  @default(0)
+  discountAmountCents     Int                  @default(0)
+  couponId                String?
+  refundedAmountCents     Int                  @default(0)
+  refundedAt              DateTime?
+  refundReference         String?
+  refundAdminNote         String?
+  lastReconciledAt        DateTime?
+  nextReconcileAt         DateTime?
+  reconcileAttempts       Int                  @default(0)
+  reconciliationErrorCode String?
+  user                    User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items                   PurchaseItem[]
+  transactions            PaymentTransaction[]
+  enrollments             Enrollment[]
+  coupon                  Coupon?              @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  couponRedemption        CouponRedemption?
+  accessGrants            CourseAccessGrant[]
 
   @@index([userId, status])
   @@index([status, createdAt])
   @@index([couponId, status])
+  @@index([status, nextReconcileAt, createdAt])
 }
 
 model PurchaseItem {
@@ -191,28 +215,55 @@ model PurchaseItem {
 }
 
 model Enrollment {
-  id         String   @id @default(cuid())
-  userId     String
-  courseId   String
-  purchaseId String
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course     Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
-  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  id           String              @id @default(cuid())
+  userId       String
+  courseId     String
+  purchaseId   String
+  createdAt    DateTime            @default(now())
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course       Course              @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  purchase     Purchase            @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  accessGrants CourseAccessGrant[]
 
   @@unique([userId, courseId])
   @@index([courseId])
 }
 
+model CourseAccessGrant {
+  id               String                  @id @default(cuid())
+  userId           String
+  courseId         String
+  purchaseId       String
+  enrollmentId     String?
+  provider         String                  @default("telegram")
+  externalInviteId String?
+  status           CourseAccessGrantStatus @default(PENDING)
+  createdAt        DateTime                @default(now())
+  expiresAt        DateTime
+  redeemedAt       DateTime?
+  revokedAt        DateTime?
+  lastErrorCode    String?
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course           Course                  @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  purchase         Purchase                @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  enrollment       Enrollment?             @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+
+  @@index([userId, courseId, createdAt])
+  @@index([status, expiresAt])
+  @@index([purchaseId, status])
+  @@index([enrollmentId])
+}
+
 model PaymentTransaction {
-  id          String         @id @default(cuid())
+  id          String              @id @default(cuid())
   purchaseId  String
-  eventId     String         @unique
+  eventId     String              @unique
   fromStatus  PaymentStatus?
   toStatus    PaymentStatus
   payloadHash String
-  createdAt   DateTime       @default(now())
-  purchase    Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  source      PaymentUpdateSource @default(WEBHOOK)
+  createdAt   DateTime            @default(now())
+  purchase    Purchase            @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
 }
 
 model WebhookEvent {

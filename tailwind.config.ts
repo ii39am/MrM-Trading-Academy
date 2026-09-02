@@ -5,13 +5,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#09070F",
-        panel: "#120D1E",
-        surface: "#171024",
-        card: "#1C1330",
+        ink: "#070511",
+        panel: "#0D0820",
+        surface: "#140B2A",
+        card: "#211044",
         brand: "#7C3AED",
-        "brand-accent": "#8B5CF6",
-        "brand-secondary": "#A78BFA",
+        "brand-accent": "#9333EA",
+        "brand-secondary": "#C084FC",
       },
       boxShadow: {
         glow: "0 0 50px rgba(124,58,237,.15)",

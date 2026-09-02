@@ -15,7 +15,7 @@ export async function createReservedPurchase(input:{userId:string;courseIds:stri
  return db.$transaction(async tx=>{
   const now=new Date();
   await tx.couponRedemption.updateMany({where:{status:"RESERVED",expiresAt:{lte:now}},data:{status:"RELEASED",releasedAt:now}});
-  const courses=await tx.course.findMany({where:{id:{in:input.courseIds},status:"PUBLISHED",publishedAt:{lte:now},telegramAccessUrl:{not:null}},select:{id:true,priceCents:true,currency:true}});
+  const courses=await tx.course.findMany({where:{id:{in:input.courseIds},status:"PUBLISHED",publishedAt:{lte:now},telegramAccessEnabled:true,telegramChatId:{not:null}},select:{id:true,priceCents:true,currency:true}});
   if(courses.length!==input.courseIds.length)throw new Error("INVALID_COURSE");
   const currencies=[...new Set(courses.map(course=>course.currency))];if(currencies.length!==1)throw new Error("INVALID_CURRENCY");
   if(await tx.enrollment.count({where:{userId:input.userId,courseId:{in:input.courseIds}}}))throw new Error("ALREADY_OWNED");

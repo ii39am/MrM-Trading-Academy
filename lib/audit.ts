@@ -2,7 +2,7 @@ import type { Prisma,UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requestDeviceContext } from "@/lib/request-security";
 
-const allowedMetadata=new Set(["courseId","purchaseId","couponId","status","fromStatus","toStatus","source","reason","count","currency","amountCents","discountAmountCents","emergencyOverride"]);
+const allowedMetadata=new Set(["courseId","purchaseId","couponId","grantId","status","fromStatus","toStatus","source","provider","reason","errorCode","count","currency","amountCents","discountAmountCents","emergencyOverride"]);
 
 export function sanitizeAuditMetadata(input:Record<string,unknown>|undefined):Prisma.InputJsonValue|undefined{
  if(!input)return undefined;

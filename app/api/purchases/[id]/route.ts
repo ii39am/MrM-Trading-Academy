@@ -1,4 +1,48 @@
 import { getSessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse } from "@/lib/security";
-export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){const user=await getSessionUser();if(!user)return errorResponse("UNAUTHORIZED","Authentication required",401);const purchase=await db.purchase.findFirst({where:{id:(await params).id,userId:user.id},select:{id:true,status:true,expectedAmount:true,receivedAmount:true,payCurrency:true,network:true,paymentAddress:true,providerStatus:true,expiresAt:true,createdAt:true,updatedAt:true,items:{select:{course:{select:{slug:true,titleEn:true,titleAr:true,image:true}}}}}});if(!purchase)return errorResponse("NOT_FOUND","Purchase not found",404);return Response.json({purchase:{...purchase,expectedAmount:purchase.expectedAmount?.toString(),receivedAmount:purchase.receivedAmount?.toString()}})}
+export async function GET(
+  _: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await getSessionUser();
+  if (!user)
+    return errorResponse("UNAUTHORIZED", "Authentication required", 401);
+  const purchase = await db.purchase.findFirst({
+    where: { id: (await params).id, userId: user.id },
+    select: {
+      id: true,
+      status: true,
+      originalAmountCents: true,
+      discountAmountCents: true,
+      amountCents: true,
+      currency: true,
+      expectedAmount: true,
+      receivedAmount: true,
+      payCurrency: true,
+      network: true,
+      paymentAddress: true,
+      providerStatus: true,
+      expiresAt: true,
+      transactionHash: true,
+      paidAt: true,
+      createdAt: true,
+      updatedAt: true,
+      items: {
+        select: {
+          course: {
+            select: { slug: true, titleEn: true, titleAr: true, image: true },
+          },
+        },
+      },
+    },
+  });
+  if (!purchase) return errorResponse("NOT_FOUND", "Purchase not found", 404);
+  return Response.json({
+    purchase: {
+      ...purchase,
+      expectedAmount: purchase.expectedAmount?.toString(),
+      receivedAmount: purchase.receivedAmount?.toString(),
+    },
+  });
+}

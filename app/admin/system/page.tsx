@@ -1,0 +1,9 @@
+import { redirect } from "next/navigation";
+import { CheckCircle2,XCircle } from "lucide-react";
+import { getSessionUser } from "@/lib/auth";
+import { isAdmin } from "@/lib/admin";
+import { getSystemReadiness } from "@/lib/system-readiness";
+
+export const metadata={title:"System readiness",robots:{index:false,follow:false}};
+export const dynamic="force-dynamic";
+export default async function SystemReadiness(){const actor=await getSessionUser();if(!actor)redirect("/login?next=/admin/system");if(!isAdmin(actor))redirect("/unauthorized");const {items}=await getSystemReadiness();return <section className="container-pad pt-28 pb-24"><p className="eyebrow">Operations</p><h1 className="mt-3 text-3xl font-semibold">System readiness</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-white/45">Configuration presence and database connectivity only. This page does not contact NOWPayments, Telegram, or Resend and does not constitute provider certification.</p><div className="mt-8 grid gap-6 lg:grid-cols-2">{Object.entries(items).map(([group,values])=><div key={group} className="rounded-2xl border border-white/10 bg-white/[.025] p-6"><h2 className="text-lg font-semibold capitalize">{group}</h2><div className="mt-4 space-y-3">{values.map(item=><div key={item.label} className="flex items-center justify-between gap-4 border-b border-white/[.07] pb-3"><span className="flex items-center gap-2 text-sm">{item.ready?<CheckCircle2 className="h-4 w-4 text-emerald-300" aria-hidden="true"/>:<XCircle className="h-4 w-4 text-amber-300" aria-hidden="true"/>}{item.label}</span><span className="text-xs text-white/45">{item.state}</span></div>)}</div></div>)}</div><p className="mt-7 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">Provider sandbox and test-chat certification remain separate manual release gates. Configured does not mean certified or production-ready.</p></section>}

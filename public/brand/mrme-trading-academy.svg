@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 96" role="img" aria-labelledby="title desc">
+  <title id="title">Mr.ME Trading Academy</title>
+  <desc id="desc">Metallic purple M and rising arrow monogram with a crown, candlesticks, and the Mr.ME Trading Academy wordmark.</desc>
+  <defs>
+    <linearGradient id="purpleMetal" x1="18" y1="8" x2="94" y2="84" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F5E9FF"/><stop offset=".12" stop-color="#C084FC"/><stop offset=".28" stop-color="#7C3AED"/><stop offset=".47" stop-color="#E9D5FF"/><stop offset=".58" stop-color="#A855F7"/><stop offset=".78" stop-color="#4C1D95"/><stop offset="1" stop-color="#D8B4FE"/>
+    </linearGradient>
+    <linearGradient id="purpleFace" x1="24" y1="28" x2="91" y2="75" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#581C87"/><stop offset=".38" stop-color="#9333EA"/><stop offset=".7" stop-color="#6D28D9"/><stop offset="1" stop-color="#2E1065"/>
+    </linearGradient>
+    <linearGradient id="silver" x1="212" y1="19" x2="358" y2="63" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/><stop offset=".28" stop-color="#EDE9FE"/><stop offset=".52" stop-color="#A78BFA"/><stop offset=".72" stop-color="#FFFFFF"/><stop offset="1" stop-color="#C4B5FD"/>
+    </linearGradient>
+    <linearGradient id="purpleWord" x1="121" y1="18" x2="208" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F3E8FF"/><stop offset=".25" stop-color="#C084FC"/><stop offset=".58" stop-color="#9333EA"/><stop offset="1" stop-color="#E9D5FF"/>
+    </linearGradient>
+    <radialGradient id="jewel" cx="35%" cy="25%" r="70%">
+      <stop stop-color="#FFFFFF"/><stop offset=".22" stop-color="#E9D5FF"/><stop offset=".5" stop-color="#A855F7"/><stop offset="1" stop-color="#4C1D95"/>
+    </radialGradient>
+    <filter id="metalGlow" x="-45%" y="-45%" width="190%" height="190%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/><feColorMatrix in="blur" values="1 0 0 0 0.35 0 0.3 0 0 0 0 0 1 0 0.25 0 0 0 .65 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softGlow" x="-30%" y="-70%" width="160%" height="240%"><feGaussianBlur stdDeviation="3.2"/></filter>
+  </defs>
+  <g filter="url(#metalGlow)">
+    <g opacity=".92" stroke="url(#purpleMetal)" stroke-width="1.4">
+      <path d="M9 42v30M5 49h8v16H5z" fill="url(#purpleFace)"/><path d="M18 35v42M14 44h8v18h-8z" fill="url(#purpleFace)"/><path d="M101 39v37M97 47h8v17h-8z" fill="url(#purpleFace)"/><path d="M110 48v26M106 54h8v13h-8z" fill="url(#purpleFace)"/>
+    </g>
+    <path d="M28 77V34h13l18 22 17-20h13v41H76V53L59 73 41 52v25Z" fill="url(#purpleFace)" stroke="url(#purpleMetal)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M32 73V39h7l20 25 20-24h6v33" fill="none" stroke="#F3E8FF" stroke-opacity=".34" stroke-width="1.2"/>
+    <path d="m57 59 28-29-8-5 27-12-11 27-5-7-27 31Z" fill="url(#purpleMetal)" stroke="#F3E8FF" stroke-opacity=".82" stroke-width="1.4" stroke-linejoin="round"/>
+    <path d="m66 54 20-21" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M35 28 30 14l11 9 8-14 10 13L69 7l9 16 11-10-5 16c-16-5-33-5-49-1Z" fill="url(#purpleFace)" stroke="url(#purpleMetal)" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M37 29c15-4 30-4 45 0l-2 5c-14-3-27-3-41 0Z" fill="url(#purpleMetal)" stroke="#E9D5FF" stroke-opacity=".52" stroke-width=".8"/>
+    <path d="M40 25c13-3 26-3 39 0" fill="none" stroke="#FFFFFF" stroke-opacity=".38" stroke-width="1"/>
+    <circle cx="30" cy="13" r="3.5" fill="url(#jewel)"/><circle cx="49" cy="8" r="3.5" fill="url(#jewel)"/><circle cx="69" cy="6" r="3.8" fill="url(#jewel)"/><circle cx="89" cy="12" r="3.5" fill="url(#jewel)"/><path d="m68 4 4-4 4 4-4 6Z" fill="url(#jewel)" transform="translate(-3 0)"/>
+  </g>
+  <ellipse cx="61" cy="85" rx="52" ry="5" fill="#A855F7" opacity=".17" filter="url(#softGlow)"/>
+  <g font-family="Georgia, 'Times New Roman', serif" font-weight="700"><text x="126" y="51" fill="url(#purpleWord)" font-size="38" letter-spacing="-.6">Mr.</text><text x="194" y="51" fill="url(#silver)" font-size="38" letter-spacing="-.6">ME</text></g>
+  <g font-family="Inter, Arial, sans-serif"><text x="128" y="69" fill="#D8B4FE" font-size="10.5" font-weight="650" letter-spacing="4.7">TRADING ACADEMY</text><path d="M128 77h31M355 77h31" stroke="#9333EA" stroke-width="1" opacity=".65"/><text x="169" y="81" fill="#C4B5FD" font-size="7.2" font-weight="600" letter-spacing="4.1">LEARN  •  TRADE  •  GROW</text></g>
+</svg>

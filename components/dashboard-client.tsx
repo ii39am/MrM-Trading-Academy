@@ -1,9 +1,161 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2,Clock3,LogOut,ReceiptText,TriangleAlert } from "lucide-react";
-import type { Locale,User } from "@/lib/types";
+import {
+  CheckCircle2,
+  Clock3,
+  LogOut,
+  ReceiptText,
+  TriangleAlert,
+} from "lucide-react";
+import type { Locale, User } from "@/lib/types";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui";
-type Purchase={id:string;status:string;amountCents:number;currency:string;createdAt:string;items:{course:{titleEn:string;titleAr:string;slug:string}}[]};
-export function DashboardClient({user,purchases,locale}:{user:User;purchases:Purchase[];locale:Locale}){const router=useRouter(),ar=locale==="ar";async function logout(){await api.logout();router.push("/");router.refresh()}return <div className="container-pad min-h-[75vh] pt-28 pb-24"><div className="flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">{ar?"لوحة الحساب":"Account dashboard"}</p><h1 className="mt-3 text-3xl font-semibold">{ar?`مرحباً، ${user.name.split(" ")[0]}`:`Welcome, ${user.name.split(" ")[0]}`}</h1><p className="mt-2 text-sm text-white/45">{ar?"تابع عمليات الدفع وافتح وصولك الخاص بأمان.":"Track payments and open your private access securely."}</p></div><div className="flex gap-2">{user.role==="ADMIN"&&<Button href="/admin" variant="secondary">{ar?"الإدارة":"Admin"}</Button>}<Button onClick={logout} variant="ghost"><LogOut className="h-4 w-4"/>{ar?"تسجيل الخروج":"Sign out"}</Button></div></div><div className="mt-10 grid gap-4 sm:grid-cols-3">{[["PAID",ar?"مشتريات مدفوعة":"Paid purchases"],["PENDING",ar?"قيد التأكيد":"Confirming"],["TOTAL",ar?"إجمالي الطلبات":"Total orders"]].map(([status,label])=><div key={status} className="rounded-2xl border border-white/[.08] bg-surface p-5"><p className="text-xs text-white/35">{label}</p><p className="mt-2 text-2xl font-semibold">{status==="TOTAL"?purchases.length:purchases.filter(item=>item.status===status).length}</p></div>)}</div><h2 className="mt-12 text-xl font-semibold">{ar?"مشترياتي":"My purchases"}</h2>{purchases.length?<div className="mt-5 grid gap-4">{purchases.map(purchase=>{const paid=purchase.status==="PAID",pending=purchase.status==="PENDING",title=purchase.items.map(item=>ar?item.course.titleAr:item.course.titleEn).join(" + ");return <Link href={`/dashboard/purchases/${purchase.id}`} key={purchase.id} className="group flex flex-col gap-5 rounded-2xl border border-white/[.08] bg-surface p-5 transition hover:border-brand-secondary/30 sm:flex-row sm:items-center"><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${paid?"bg-emerald-500/10 text-emerald-300":pending?"bg-brand/20 text-brand-secondary":"bg-amber-500/10 text-amber-300"}`}>{paid?<CheckCircle2 className="h-5 w-5"/>:pending?<Clock3 className="h-5 w-5"/>:<TriangleAlert className="h-5 w-5"/>}</span><div className="min-w-0 flex-1"><h3 className="truncate font-medium">{title}</h3><p className="mt-1 text-xs text-white/35">{new Intl.NumberFormat(locale,{style:"currency",currency:purchase.currency}).format(purchase.amountCents/100)} · {purchase.status}</p></div><span className="text-sm text-brand-secondary">{paid?(ar?"فتح الوصول":"Open access"):ar?"عرض الحالة":"View status"}</span></Link>})}</div>:<div className="glass mt-5 rounded-3xl px-6 py-16 text-center"><ReceiptText className="mx-auto h-8 w-8 text-brand-secondary"/><h3 className="mt-4 text-xl font-semibold">{ar?"لا توجد مشتريات بعد":"No purchases yet"}</h3><p className="mx-auto mt-2 max-w-md text-sm text-white/50">{ar?"اختر أحد عروض الأكاديمية للبدء.":"Choose an academy offer to get started."}</p><Button href="/courses" variant="secondary" className="mt-6">{ar?"استعرض العروض":"Browse offers"}</Button></div>}</div>}
+type Purchase = {
+  id: string;
+  status: string;
+  amountCents: number;
+  currency: string;
+  createdAt: string;
+  items: { course: { titleEn: string; titleAr: string; slug: string } }[];
+};
+export function DashboardClient({
+  user,
+  purchases,
+  locale,
+}: {
+  user: User;
+  purchases: Purchase[];
+  locale: Locale;
+}) {
+  const router = useRouter(),
+    ar = locale === "ar";
+  async function logout() {
+    await api.logout();
+    router.push("/");
+    router.refresh();
+  }
+  return (
+    <div className="container-pad min-h-[75vh] pt-28 pb-24">
+      <div className="flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <p className="eyebrow">{ar ? "لوحة الحساب" : "Account dashboard"}</p>
+          <h1 className="mt-3 text-3xl font-semibold">
+            {ar
+              ? `مرحباً، ${user.name.split(" ")[0]}`
+              : `Welcome, ${user.name.split(" ")[0]}`}
+          </h1>
+          <p className="mt-2 text-sm text-white/45">
+            {ar
+              ? "تابع عمليات الدفع وافتح وصولك الخاص بأمان."
+              : "Track payments and open your private access securely."}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {user.role === "ADMIN" && (
+            <Button href="/admin" variant="secondary">
+              {ar ? "الإدارة" : "Admin"}
+            </Button>
+          )}
+          <Button onClick={logout} variant="ghost">
+            <LogOut className="h-4 w-4" />
+            {ar ? "تسجيل الخروج" : "Sign out"}
+          </Button>
+        </div>
+      </div>
+      <div className="mt-10 grid gap-4 sm:grid-cols-3">
+        {[
+          ["PAID", ar ? "مشتريات مدفوعة" : "Paid purchases"],
+          ["PENDING", ar ? "قيد التأكيد" : "Confirming"],
+          ["TOTAL", ar ? "إجمالي الطلبات" : "Total orders"],
+        ].map(([status, label]) => (
+          <div
+            key={status}
+            className="rounded-2xl border border-white/[.08] bg-surface p-5"
+          >
+            <p className="text-xs text-white/35">{label}</p>
+            <p className="mt-2 text-2xl font-semibold">
+              {status === "TOTAL"
+                ? purchases.length
+                : purchases.filter((item) => item.status === status).length}
+            </p>
+          </div>
+        ))}
+      </div>
+      <h2 className="mt-12 text-xl font-semibold">
+        {ar ? "مشترياتي" : "My purchases"}
+      </h2>
+      {purchases.length ? (
+        <div className="mt-5 grid gap-4">
+          {purchases.map((purchase) => {
+            const paid = purchase.status === "PAID",
+              pending = purchase.status === "PENDING",
+              title = purchase.items
+                .map((item) => (ar ? item.course.titleAr : item.course.titleEn))
+                .join(" + ");
+            return (
+              <Link
+                href={
+                  paid
+                    ? `/dashboard/purchases/${purchase.id}`
+                    : `/checkout/${purchase.id}`
+                }
+                key={purchase.id}
+                className="group flex flex-col gap-5 rounded-2xl border border-white/[.08] bg-surface p-5 transition hover:border-brand-secondary/30 sm:flex-row sm:items-center"
+              >
+                <span
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${paid ? "bg-emerald-500/10 text-emerald-300" : pending ? "bg-brand/20 text-brand-secondary" : "bg-amber-500/10 text-amber-300"}`}
+                >
+                  {paid ? (
+                    <CheckCircle2 className="h-5 w-5" />
+                  ) : pending ? (
+                    <Clock3 className="h-5 w-5" />
+                  ) : (
+                    <TriangleAlert className="h-5 w-5" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate font-medium">{title}</h3>
+                  <p className="mt-1 text-xs text-white/35">
+                    {new Intl.NumberFormat(locale, {
+                      style: "currency",
+                      currency: purchase.currency,
+                    }).format(purchase.amountCents / 100)}{" "}
+                    · {purchase.status}
+                  </p>
+                  <p className="mt-1 break-all font-mono text-[11px] text-white/25">
+                    {ar ? "معرّف عملية الشراء" : "Purchase ID"}: {purchase.id}
+                  </p>
+                </div>
+                <span className="text-sm text-brand-secondary">
+                  {paid
+                    ? ar
+                      ? "فتح الوصول"
+                      : "Open access"
+                    : ar
+                      ? "عرض الحالة"
+                      : "View status"}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="glass mt-5 rounded-3xl px-6 py-16 text-center">
+          <ReceiptText className="mx-auto h-8 w-8 text-brand-secondary" />
+          <h3 className="mt-4 text-xl font-semibold">
+            {ar ? "لا توجد مشتريات بعد" : "No purchases yet"}
+          </h3>
+          <p className="mx-auto mt-2 max-w-md text-sm text-white/50">
+            {ar
+              ? "اختر أحد عروض الأكاديمية للبدء."
+              : "Choose an academy offer to get started."}
+          </p>
+          <Button href="/courses" variant="secondary" className="mt-6">
+            {ar ? "استعرض العروض" : "Browse offers"}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

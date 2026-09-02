@@ -50,13 +50,6 @@ export class ResendEmailProvider implements EmailProvider {
   async send(message: TransactionalEmail) {
     const recipient = message.to.trim().toLowerCase();
 
-    console.log("========== RESEND DEBUG ==========");
-    console.log("Recipient:", recipient);
-    console.log("From:", this.from);
-    console.log("API Key Exists:", !!this.apiKey);
-    console.log("API Key Prefix:", this.apiKey.substring(0, 8) + "...");
-    console.log("==================================");
-
     let response: Response;
 
     try {
@@ -76,30 +69,16 @@ export class ResendEmailProvider implements EmailProvider {
         signal: AbortSignal.timeout(8000),
       });
 
-      console.log("RESEND STATUS:", response.status);
-      console.log("RESEND STATUS TEXT:", response.statusText);
     } catch (error) {
-      console.error("RESEND FETCH FAILED");
-      console.error(error);
       throw error;
     }
 
     const body = await response.json().catch(() => null) as ResendResponseBody | null;
 
-    console.log("RESEND BODY:");
-    console.log(JSON.stringify(body, null, 2));
-
     const providerError = body?.error ?? (!response.ok ? body : null);
     const deliveryId = safeString(body?.data?.id) ?? safeString(body?.id);
 
     if (!response.ok || providerError || !deliveryId) {
-      console.error("RESEND DELIVERY FAILED");
-      console.error({
-        status: response.status,
-        requestId: response.headers.get("x-request-id"),
-        body,
-      });
-
       throw new ResendEmailError({
         statusCode: safeStatus(providerError?.statusCode, response.status),
         errorName:
@@ -113,7 +92,5 @@ export class ResendEmailProvider implements EmailProvider {
       });
     }
 
-    console.log("RESEND EMAIL SENT SUCCESSFULLY");
-    console.log("Delivery ID:", deliveryId);
   }
 }

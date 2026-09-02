@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs><linearGradient id="m" x1="9" y1="5" x2="57" y2="59"><stop stop-color="#F5E9FF"/><stop offset=".18" stop-color="#C084FC"/><stop offset=".42" stop-color="#7C3AED"/><stop offset=".58" stop-color="#E9D5FF"/><stop offset=".75" stop-color="#6D28D9"/><stop offset="1" stop-color="#D8B4FE"/></linearGradient><linearGradient id="f" x1="13" y1="20" x2="50" y2="56"><stop stop-color="#9333EA"/><stop offset="1" stop-color="#2E1065"/></linearGradient></defs>
+  <rect width="64" height="64" rx="15" fill="#0D0820"/>
+  <path d="M14 22 11 11l8 7 6-11 7 10 7-12 8 13 7-7-3 12c-13-4-25-4-37-1Z" fill="url(#f)" stroke="url(#m)" stroke-width="1.7"/>
+  <circle cx="11" cy="10" r="2.2" fill="url(#m)"/><circle cx="25" cy="6" r="2.2" fill="url(#m)"/><circle cx="39" cy="4" r="2.4" fill="url(#m)"/><circle cx="54" cy="10" r="2.2" fill="url(#m)"/>
+  <path d="M11 56V26h10l12 15 11-14h9v29H43V40L33 53 21 40v16Z" fill="url(#f)" stroke="url(#m)" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="m32 44 17-18-5-3 16-8-6 17-4-4-16 19Z" fill="url(#m)" stroke="#F3E8FF" stroke-opacity=".75" stroke-width="1"/>
+</svg>

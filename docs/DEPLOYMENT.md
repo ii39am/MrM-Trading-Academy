@@ -37,6 +37,6 @@ npx prisma migrate status
 npx prisma migrate deploy
 ```
 
-After migration, an administrator must add a valid `https://t.me/...` destination to each product before publishing it. Telegram destinations are never returned by public product APIs.
+After migration, configure `TELEGRAM_ACCESS_ENABLED`, store `TELEGRAM_BOT_TOKEN` in the runtime secret manager, add the bot to each private chat with only invite-link permission, and configure each Course's server-side chat ID. The deprecated permanent `telegramAccessUrl` is not used or returned to customers.
 
 After the email-auth migration, review all `MIGRATION_REQUIRED` users before launch. Never activate one without verifying ownership and assigning a real unique email.

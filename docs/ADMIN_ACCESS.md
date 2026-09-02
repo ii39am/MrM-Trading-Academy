@@ -27,4 +27,4 @@ The command refuses to remove the final active ADMIN. `--emergency-override` byp
 
 Role changes are transactional, increment `sessionVersion`, and create security audit events. No default administrator or password is created.
 
-`/admin` requires ADMIN and displays live database records. `/admin/products` manages bilingual product content, server-only Telegram destinations, publication, and pricing. Every admin API repeats the database-backed ADMIN check.
+`/admin` requires ADMIN and displays live database records. `/admin/products` manages bilingual product content, the server-side Telegram chat ID/access switch, publication, and pricing. The bot token remains environment-only, and permanent invite URLs are deprecated. Every admin API repeats the database-backed ADMIN check.

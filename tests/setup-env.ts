@@ -4,3 +4,4 @@ process.env.APP_URL??="http://localhost:3000";
 process.env.NEXT_PUBLIC_APP_URL??="http://localhost:3000";
 process.env.PAYMENTS_ENABLED??="false";
 process.env.EMAIL_ENABLED??="false";
+process.env.TELEGRAM_ACCESS_ENABLED??="false";
