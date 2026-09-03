@@ -6,9 +6,7 @@ import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button, Spinner } from "@/components/ui";
 import type { Locale } from "@/lib/types";
-
-const safeNext = (value: string | null) =>
-  value?.startsWith("/") && !value.startsWith("//") ? value : "/dashboard";
+import { safeNextPath } from "@/lib/safe-navigation";
 
 export function AuthForm({
   mode,
@@ -45,7 +43,7 @@ export function AuthForm({
     try {
       if (mode === "login") {
         await api.login(String(data.get("email")), password);
-        router.replace(safeNext(search.get("next")));
+        router.replace(safeNextPath(search.get("next")));
       } else {
         const email = String(data.get("email")).trim().toLowerCase();
         await api.register(
@@ -56,7 +54,7 @@ export function AuthForm({
           data.get("termsAccepted") === "on",
         );
         router.replace(
-          `/verify-email?email=${encodeURIComponent(email)}&next=${encodeURIComponent(safeNext(search.get("next")))}`,
+          `/verify-email?email=${encodeURIComponent(email)}&next=${encodeURIComponent(safeNextPath(search.get("next")))}`,
         );
       }
       router.refresh();
@@ -221,7 +219,7 @@ export function AuthForm({
       <p className="mt-7 text-center text-sm text-white/40">
         <Link
           className="font-medium text-brand-secondary hover:text-white transition"
-          href={`${mode === "login" ? "/register" : "/login"}?next=${encodeURIComponent(safeNext(search.get("next")))}`}
+          href={`${mode === "login" ? "/register" : "/login"}?next=${encodeURIComponent(safeNextPath(search.get("next")))}`}
         >
           {ar
             ? mode === "login"

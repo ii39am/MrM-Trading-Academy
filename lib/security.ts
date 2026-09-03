@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getAppOrigin } from "@/lib/app-url";
 
 export function clientKey(request:Request,scope:string){
  const trusted=process.env.TRUST_PROXY==="true";
@@ -19,7 +20,7 @@ export async function enforceRateLimit(key:string,limit:number,windowMs:number){
 }
 export function verifySameOrigin(request:Request){
  const origin=request.headers.get("origin"); if(!origin)return process.env.NODE_ENV!=="production";
- try{return new URL(origin).origin===new URL(process.env.APP_URL??process.env.NEXT_PUBLIC_APP_URL!).origin}catch{return false}
+ try{return new URL(origin).origin===getAppOrigin()}catch{return false}
 }
 export function rateLimited(retryAfter:number){return NextResponse.json({error:{code:"RATE_LIMITED",message:"Too many requests. Try again later."}},{status:429,headers:{"Retry-After":String(retryAfter)}})}
 export function errorResponse(code:string,message:string,status:number){return NextResponse.json({error:{code,message}},{status})}

@@ -1,2 +1,3 @@
 import type { MetadataRoute } from "next";
-export default function robots():MetadataRoute.Robots{const base=process.env.APP_URL??process.env.NEXT_PUBLIC_APP_URL??"http://localhost:3000";return {rules:{userAgent:"*",allow:"/",disallow:["/dashboard","/admin","/api/","/login","/register","/verify-email","/forgot-password"]},sitemap:`${base}/sitemap.xml`}}
+import { appUrl } from "@/lib/app-url";
+export default function robots():MetadataRoute.Robots{return {rules:{userAgent:"*",allow:"/",disallow:["/dashboard","/admin","/api/","/login","/register","/verify-email","/forgot-password"]},sitemap:appUrl("/sitemap.xml").toString()}}
