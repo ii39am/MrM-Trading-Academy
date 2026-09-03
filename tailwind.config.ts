@@ -5,10 +5,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#070511",
-        panel: "#0D0820",
-        surface: "#140B2A",
-        card: "#211044",
+        ink: "rgb(var(--color-ink) / <alpha-value>)",
+        panel: "rgb(var(--color-panel) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
+        card: "rgb(var(--color-card) / <alpha-value>)",
         brand: "#7C3AED",
         "brand-accent": "#9333EA",
         "brand-secondary": "#C084FC",

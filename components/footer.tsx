@@ -6,7 +6,7 @@ import type { Locale } from "@/lib/types";
 export function Footer({ locale }: { locale: Locale }) {
   const ar = locale === "ar";
   return (
-    <footer className="relative isolate overflow-hidden border-t border-violet-200/[.08] bg-[#06040D]">
+    <footer className="site-footer relative isolate overflow-hidden border-t border-violet-200/[.08] bg-[#06040D]">
       <div className="absolute inset-x-0 top-0 -z-10 h-64 bg-[radial-gradient(circle_at_20%_0%,rgba(124,58,237,.12),transparent_42%)]" aria-hidden="true" />
       <DecorativeChart className="absolute inset-x-0 bottom-10 -z-10 h-32 w-full opacity-35" />
       <div className="container-pad grid gap-10 py-14 sm:py-16 lg:grid-cols-[1.5fr_.7fr_.7fr_.8fr]">

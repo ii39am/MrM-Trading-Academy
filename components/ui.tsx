@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 type ButtonVariant="primary"|"secondary"|"ghost"|"outline"|"destructive";
 export function Button({href,children,variant="primary",className,type,disabled,onClick}:{href?:string;children:React.ReactNode;variant?:ButtonVariant;className?:string;type?:"button"|"submit";disabled?:boolean;onClick?:()=>void}){
  const styles=cn("inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09070f] disabled:pointer-events-none disabled:opacity-45",
- variant==="primary"&&"border border-violet-300/15 bg-[linear-gradient(135deg,#7C3AED,#9333EA)] text-white shadow-[0_10px_30px_rgba(124,58,237,.25)] hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:brightness-95",
+ variant==="primary"&&"text-on-brand border border-violet-300/15 bg-[linear-gradient(135deg,#7C3AED,#9333EA)] text-white shadow-[0_10px_30px_rgba(124,58,237,.25)] hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:brightness-95",
  variant==="secondary"&&"border border-violet-200/15 bg-violet-100/[.07] text-violet-50 hover:border-violet-200/25 hover:bg-violet-100/[.11]",
  variant==="ghost"&&"text-violet-100/65 hover:bg-violet-100/[.06] hover:text-white",
  variant==="outline"&&"border border-violet-400/35 bg-transparent text-violet-200 hover:bg-violet-500/10 hover:text-white",

@@ -7,7 +7,7 @@ export function BrandLogo({ className, placement = "nav" }: { className?: string
     <Link
       href="/"
       className={cn(
-        "group relative inline-flex shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300",
+        "brand-logo-shell group relative inline-flex shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300",
         className,
       )}
       aria-label="Mr.ME Trading Academy home"
