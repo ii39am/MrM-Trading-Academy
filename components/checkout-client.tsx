@@ -143,6 +143,10 @@ export function CheckoutClient({
     countdown = remaining(purchase?.expiresAt ?? null, now);
   const isActive = purchase?.status === "PENDING",
     isPaid = purchase?.status === "PAID";
+  // Display only: settlement remains exclusively server-authoritative.
+  const hasReceived = !!purchase?.receivedAmount &&
+    /^\d+(?:\.\d+)?$/.test(purchase.receivedAmount) && /[1-9]/.test(purchase.receivedAmount);
+  const paymentDetected = isActive && (hasReceived || purchase?.providerStatus === "partially_paid");
   useEffect(() => {
     if (
       isActive &&
@@ -295,7 +299,8 @@ export function CheckoutClient({
                 </p>
               )}
             </div>
-            {isActive && purchase.paymentAddress && purchase.expectedAmount && (
+            {paymentDetected && <Alert>{copy.receivedPending}</Alert>}
+            {isActive && !paymentDetected && purchase.paymentAddress && purchase.expectedAmount && (
               <>
                 <div className="mt-7 text-center">
                   <p className="text-xs font-semibold uppercase tracking-wider text-white/35">

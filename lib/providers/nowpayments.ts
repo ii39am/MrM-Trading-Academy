@@ -1,5 +1,6 @@
 import { createHash,createHmac,timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import type { CheckoutInput,CheckoutSession,PaymentProvider,ProviderPaymentStatus,VerifiedPaymentEvent } from "@/lib/payment";
 import { NowPaymentsHttpClient } from "@/lib/providers/nowpayments-client";
 
@@ -17,20 +18,33 @@ export function verifyNowPaymentsSignature(payload:string,signature:string,secre
 export function usdFromCents(amountCents:number){if(!Number.isSafeInteger(amountCents)||amountCents<=0)throw new NowPaymentsProviderError("INVALID_INPUT");const cents=BigInt(amountCents);return `${cents/100n}.${String(cents%100n).padStart(2,"0")}`}
 
 const decimalValue=z.union([z.string(),z.number().finite()]).transform(String).pipe(z.string().regex(/^\d+(?:\.\d{1,12})?$/).max(43));
+// Bound to PostgreSQL Decimal(30,12); compare with Decimal, never floating point.
+const positiveQuote=decimalValue.refine(value=>{
+ try {
+  const amount=new Prisma.Decimal(value);
+  return amount.isFinite()&&amount.gt(0)&&amount.lt("1000000000000000000")&&amount.decimalPlaces()<=12;
+ } catch { return false; }
+}, "Invalid positive payment quote");
+// Official IPN examples omit network. Omission is permitted only alongside the
+// independently validated usdttrc20 asset. A supplied network must be TRON.
+const paymentNetwork=z.string().transform(value=>value.toLowerCase()).pipe(z.enum(["trx","trc20"])).optional();
 const paymentId=z.union([z.string().regex(/^[A-Za-z0-9_-]{1,100}$/),z.number().int().nonnegative()]).transform(String);
 const tronAddress=z.string().regex(/^T[1-9A-HJ-NP-Za-km-z]{33}$/);
 const providerPayment=z.object({
  payment_id:paymentId,
  payment_status:z.string().min(1).max(40).transform(value=>value.toLowerCase()),
  pay_address:tronAddress,
- pay_amount:decimalValue,
+ pay_amount:positiveQuote,
+ network:paymentNetwork,
  actually_paid:decimalValue.optional(),
  pay_currency:z.string().min(1).max(40).transform(value=>value.toLowerCase()),
  price_amount:decimalValue,
  price_currency:z.string().min(1).max(20).transform(value=>value.toLowerCase()),
  order_id:z.string().min(1).max(100),
- expiration_estimate_date:z.string().datetime({offset:true}).optional(),
- payin_hash:z.string().min(1).max(200).optional(),
+ expiration_estimate_date:z.string().datetime({offset:true}).nullish().transform(value=>value??undefined),
+ payin_hash:z.string().min(1).max(200).nullish().transform(value=>value??undefined),
+ // Payout/precision/invoice metadata is intentionally unused and stripped,
+ // including null values. It cannot affect settlement or receivedAmount.
 });
 type ProviderPayment=z.infer<typeof providerPayment>;
 

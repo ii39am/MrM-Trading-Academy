@@ -175,3 +175,10 @@ describe("payment reconciliation", () => {
     expect(stored.reconciliationErrorCode).toBe(expectedCode);
   });
 });
+
+it.each(["waiting","confirming","confirmed","sending","partially_paid"])("does not grant for intermediate reconciliation %s even with full funds",async providerStatus=>{
+ const value=await purchase();getPaymentStatus.mockResolvedValue(status(value,{status:"PENDING",providerStatus}));
+ await reconcilePurchase(value.id);
+ expect((await db.purchase.findUniqueOrThrow({where:{id:value.id}})).status).toBe("PENDING");
+ expect(await db.enrollment.count({where:{userId,courseId}})).toBe(0);
+});

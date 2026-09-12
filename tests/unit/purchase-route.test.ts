@@ -24,3 +24,13 @@ describe("purchase checkout route",()=>{
  it("marks the purchase failed and releases a coupon reservation after provider failure",async()=>{mocks.createCheckout.mockRejectedValue(new Error("provider down"));expect((await POST(request({courseIds:["course-1"],couponCode:"SAVE"}))).status).toBe(503);expect(mocks.purchaseUpdate).toHaveBeenCalledWith({where:{id:"purchase-1"},data:{status:"FAILED",providerStatus:"payment_creation_error"}});expect(mocks.redemptionUpdate).toHaveBeenCalledWith({where:{purchaseId:"purchase-1",status:"RESERVED"},data:{status:"RELEASED",releasedAt:expect.any(Date)}})});
  it("preserves safe provider identifiers as a recoverable pending payment after local persistence failure",async()=>{const log=vi.spyOn(console,"error").mockImplementation(()=>undefined);mocks.purchaseUpdate.mockRejectedValueOnce(new Error("database unavailable")).mockResolvedValueOnce({});expect((await POST(request({courseIds:["course-1"]}))).status).toBe(503);expect(mocks.purchaseUpdate).toHaveBeenLastCalledWith({where:{id:"purchase-1"},data:expect.objectContaining({provider:"nowpayments",providerSessionId:"payment-1",providerPaymentId:"payment-1",status:"PENDING",providerStatus:"persistence_recovery_pending",nextReconcileAt:expect.any(Date),reconciliationErrorCode:"LOCAL_PERSISTENCE_FAILED"})});expect(log).toHaveBeenCalledWith(expect.stringContaining('"purchaseId":"purchase-1"'));expect(log).not.toHaveBeenCalledWith(expect.stringContaining("private"))});
 });
+
+it("translates the dynamic provider minimum without changing prices",async()=>{
+ const {NowPaymentsHttpError}=await import("@/lib/providers/nowpayments-client");
+ mocks.createCheckout.mockRejectedValue(new NowPaymentsHttpError("AMOUNT_MINIMAL_ERROR",400));
+ const result=await POST(request({courseIds:["course-1"]}));
+ expect(result.status).toBe(422);
+ expect(await result.json()).toMatchObject({error:{code:"PAYMENT_AMOUNT_BELOW_PROVIDER_MINIMUM"}});
+ expect(mocks.createCheckout).toHaveBeenCalledWith(expect.objectContaining({amountCents:900}));
+ expect(mocks.redemptionUpdate).toHaveBeenCalled();
+});

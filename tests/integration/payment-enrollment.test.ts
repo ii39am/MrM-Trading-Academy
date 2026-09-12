@@ -30,3 +30,20 @@ describe("payment enrollment transaction",()=>{
  it("records failed payment without granting access",async()=>{const value=await purchase("failed");await processPaymentEvent("nowpayments",event(value,{status:"FAILED",providerStatus:"failed",receivedAmount:"0"}),"failed-payload");expect((await db.purchase.findUniqueOrThrow({where:{id:value.id}})).status).toBe("FAILED");expect(await db.enrollment.count({where:{userId,courseId}})).toBe(0)});
  it("revokes the enrollment and outstanding access grants on refund and cannot re-grant them",async()=>{const value=await purchase("refund");await processPaymentEvent("nowpayments",event(value),"refund-paid-payload");const enrollment=await db.enrollment.findUniqueOrThrow({where:{userId_courseId:{userId,courseId}}});await db.courseAccessGrant.create({data:{userId,courseId,purchaseId:value.id,enrollmentId:enrollment.id,status:"ACTIVE",expiresAt:new Date(Date.now()+15*60_000),externalInviteId:"safe-name"}});await processPaymentEvent("nowpayments",event(value,{status:"REFUNDED",providerStatus:"refunded"}),"refund-payload");expect((await db.purchase.findUniqueOrThrow({where:{id:value.id}})).status).toBe("REFUNDED");expect(await db.enrollment.count({where:{userId,courseId}})).toBe(0);expect((await db.courseAccessGrant.findFirstOrThrow({where:{purchaseId:value.id}})).status).toBe("REVOKED");await expect(processPaymentEvent("nowpayments",event(value),"post-refund-payload")).rejects.toThrow("Invalid payment transition");expect(await db.enrollment.count({where:{userId,courseId}})).toBe(0)});
 });
+
+it.each(["0","-1"])("rejects stored nonpositive expected amount %s",async expected=>{
+ const value=await purchase("invalid-expected",expected);
+ await expect(processPaymentEvent("nowpayments",event(value,{expectedAmount:expected,receivedAmount:"0"}),"invalid-expected")).rejects.toThrow();
+ expect((await db.purchase.findUniqueOrThrow({where:{id:value.id}})).status).toBe("PENDING");
+ expect(await db.enrollment.count({where:{userId,courseId}})).toBe(0);
+});
+it.each(["0","-1"])("rejects provider nonpositive expected amount %s",async expectedAmount=>{
+ const value=await purchase("invalid-provider");
+ await expect(processPaymentEvent("nowpayments",event(value,{expectedAmount}),"invalid-provider")).rejects.toThrow();
+ expect(await db.enrollment.count({where:{userId,courseId}})).toBe(0);
+});
+it.each(["waiting","confirming","confirmed","sending","partially_paid"])("rejects a forged PAID candidate with intermediate provider status %s",async providerStatus=>{
+ const value=await purchase("intermediate");
+ await expect(processPaymentEvent("nowpayments",event(value,{providerStatus}),"intermediate")).rejects.toThrow("Only finished");
+ expect(await db.enrollment.count({where:{userId,courseId}})).toBe(0);
+});

@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  enabled: true,
   user: vi.fn(),
   reconcile: vi.fn(),
   audit: vi.fn(),
   sameOrigin: vi.fn(),
   rate: vi.fn(),
 }));
+vi.mock("@/lib/env",()=>({env:{get PAYMENTS_ENABLED(){return mocks.enabled}}}));
 vi.mock("@/lib/auth", () => ({ getSessionUser: mocks.user }));
 vi.mock("@/lib/admin", () => ({ isAdmin: (user: { role?: string; status?: string } | null) => user?.role === "ADMIN" && user.status === "ACTIVE" }));
 vi.mock("@/lib/payment-reconciliation", () => ({ reconcilePurchase: mocks.reconcile }));
@@ -29,6 +31,7 @@ const request = () => new Request("http://localhost:3000/api/admin/purchases/pur
 const params = { params: Promise.resolve({ id: "purchase-1" }) };
 
 beforeEach(() => {
+  mocks.enabled=true;
   mocks.sameOrigin.mockReturnValue(true);
   mocks.rate.mockResolvedValue({ allowed: true, retryAfter: 0 });
   mocks.audit.mockResolvedValue({});
@@ -52,4 +55,10 @@ describe("manual admin payment reconciliation", () => {
     expect(mocks.reconcile).toHaveBeenCalledWith("purchase-1");
     expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "PAYMENT_RECONCILIATION_REQUESTED", entityId: "purchase-1" }));
   });
+});
+
+it("blocks manual reconciliation when payments are disabled",async()=>{
+ mocks.enabled=false;mocks.user.mockResolvedValue({id:"admin",role:"ADMIN",status:"ACTIVE"});
+ expect((await POST(request(),params)).status).toBe(503);
+ expect(mocks.reconcile).not.toHaveBeenCalled();
 });

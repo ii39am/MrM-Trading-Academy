@@ -42,3 +42,47 @@ describe("NOWPayments payment status and IPN",()=>{
  it("fails closed for invalid signatures and modified payloads",async()=>{const body=payment(),payload=JSON.stringify(body),signature=createHmac("sha512",SECRET).update(canonicalJson(body)).digest("hex");expect(verifyNowPaymentsSignature(payload,signature,SECRET)).toBe(true);expect(verifyNowPaymentsSignature(payload.replace("waiting","finished"),signature,SECRET)).toBe(false);await expect(provider().verifyWebhook(payload,"00".repeat(64))).rejects.toMatchObject({code:"INVALID_SIGNATURE"})});
  it("rejects a correctly signed but unexpected IPN schema before fulfillment",async()=>{const body=payment({pay_address:"invalid"}),payload=JSON.stringify(body),signature=createHmac("sha512",SECRET).update(canonicalJson(body)).digest("hex");await expect(provider().verifyWebhook(payload,signature)).rejects.toMatchObject({code:"INVALID_RESPONSE"})});
 });
+
+const liveShape={payment_id:7,order_id:"purchase-1",pay_address:ADDRESS,payment_status:"waiting",price_amount:15,price_currency:"usd",pay_amount:14.963173,actually_paid:0,outcome_amount:14.813541,pay_currency:"usdttrc20",network:"trx",payin_hash:null,payout_hash:null,expiration_estimate_date:null,network_precision:null,payin_extra_id:null,invoice_id:null};
+async function signed(body:typeof liveShape|Record<string,unknown>){
+ const payload=JSON.stringify(body);
+ return provider().verifyWebhook(payload,createHmac("sha512",SECRET).update(canonicalJson(JSON.parse(payload))).digest("hex"));
+}
+describe("production-shaped payment regressions",()=>{
+ it("uses actually_paid, never merchant outcome, and accepts nullable metadata",async()=>{
+  const result=await signed(liveShape);
+  expect(result).toMatchObject({expectedAmount:"14.963173",receivedAmount:"0",network:"TRC20",status:"PENDING",transactionHash:undefined,expiresAt:undefined});
+  expect(result.receivedAmount).not.toBe(String(liveShape.outcome_amount));
+ });
+ it("maps a fully received finished response to a PAID candidate",async()=>{
+  expect(await signed({...liveShape,payment_status:"finished",actually_paid:liveShape.pay_amount})).toMatchObject({status:"PAID",receivedAmount:"14.963173"});
+ });
+ it.each(["trx","trc20","TRC20"])("normalizes %s across all provider operations",async network=>{
+  const body={...liveShape,network};vi.stubGlobal("fetch",vi.fn().mockImplementation(()=>Promise.resolve(jsonResponse(body))));
+  expect(await provider().createCheckout({purchaseId:"purchase-1",userId:"u",courseIds:["c"],amountCents:1500})).toMatchObject({network:"TRC20"});
+  expect(await provider().getPaymentStatus("7")).toMatchObject({network:"TRC20"});
+  expect(await signed(body)).toMatchObject({network:"TRC20"});
+ });
+ it.each(["erc20","eth","bep20","bsc","sol","btc","unknown",null])("rejects contradictory network %s at every boundary",async network=>{
+  const body={...liveShape,network};vi.stubGlobal("fetch",vi.fn().mockImplementation(()=>Promise.resolve(jsonResponse(body))));
+  await expect(provider().createCheckout({purchaseId:"purchase-1",userId:"u",courseIds:["c"],amountCents:1500})).rejects.toMatchObject({code:"INVALID_RESPONSE"});
+  await expect(provider().getPaymentStatus("7")).rejects.toMatchObject({code:"INVALID_RESPONSE"});
+  await expect(signed(body)).rejects.toMatchObject({code:"INVALID_RESPONSE"});
+ });
+ it("allows omitted network only with the validated TRC20 asset",async()=>{
+  const body={...liveShape,network:undefined};
+  expect(await signed(body)).toMatchObject({network:"TRC20"});
+  await expect(signed({...body,pay_currency:"btc"})).rejects.toThrow();
+ });
+ it.each(["0","0.0",0,"-1",-1,"NaN","Infinity","bad","1.2.3","0.0000000000001","1000000000000000000"])("rejects invalid quote %s",async pay_amount=>{
+  const body={...liveShape,pay_amount};vi.stubGlobal("fetch",vi.fn().mockImplementation(()=>Promise.resolve(jsonResponse(body))));
+  await expect(provider().createCheckout({purchaseId:"purchase-1",userId:"u",courseIds:["c"],amountCents:1500})).rejects.toMatchObject({code:"INVALID_RESPONSE"});
+  await expect(signed(body)).rejects.toMatchObject({code:"INVALID_RESPONSE"});
+ });
+ it("accepts a legitimate small positive quote",async()=>expect(await signed({...liveShape,pay_amount:"0.000001"})).toMatchObject({expectedAmount:"0.000001"}));
+ it("preserves a safe minimum error code without provider content",async()=>{
+  vi.stubGlobal("fetch",vi.fn().mockResolvedValue(jsonResponse({code:"AMOUNT_MINIMAL_ERROR",message:"private provider detail"},400)));
+  const error=await provider().createCheckout({purchaseId:"purchase-1",userId:"u",courseIds:["c"],amountCents:1500}).catch(e=>e);
+  expect(error.code).toBe("AMOUNT_MINIMAL_ERROR");expect(JSON.stringify(error)).not.toContain("private provider detail");
+ });
+});

@@ -205,3 +205,11 @@ describe("checkout status UI", () => {
     expect(container.textContent).not.toMatch(/api[_ -]?key|ipn[_ -]?secret|NOWPAYMENTS_/i);
   });
 });
+
+it.each(["partially_paid","waiting","confirming","confirmed","sending"])("never asks for the full amount again after received funds (%s)",async providerStatus=>{
+ await renderCheckout({providerStatus,receivedAmount:"12.5"});
+ expect(screen.queryByText("Send exactly this amount")).not.toBeInTheDocument();
+ expect(screen.queryByRole("button",{name:"Copy amount"})).not.toBeInTheDocument();
+ expect(screen.getByText(/Do not send the full amount again/)).toBeInTheDocument();
+ expect(screen.queryByText("Payment successful")).not.toBeInTheDocument();
+});

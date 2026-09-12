@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { getSessionUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { writeAudit } from "@/lib/audit";
@@ -19,6 +20,8 @@ export async function POST(
   const actor = await getSessionUser();
   if (!isAdmin(actor))
     return errorResponse("FORBIDDEN", "Insufficient permission", 403);
+  if (!env.PAYMENTS_ENABLED)
+    return errorResponse("RECONCILIATION_DISABLED", "Payment reconciliation is disabled", 503);
   const rate = await enforceRateLimit(
     clientKey(request, `admin-payment-reconcile:${actor.id}`),
     10,

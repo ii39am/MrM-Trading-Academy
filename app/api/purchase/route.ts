@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NowPaymentsHttpError } from "@/lib/providers/nowpayments-client";
 import { getSessionUser } from "@/lib/auth";
 import { getPaymentProvider } from "@/lib/payment";
 import { db } from "@/lib/db";
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
     });
     if (checkout.purchaseId !== purchase.id)
       throw new Error("Provider purchase binding mismatch");
-  } catch {
+  } catch (error) {
     try {
       await failPurchase(purchase.id, "payment_creation_error");
     } catch {
@@ -127,6 +128,8 @@ export async function POST(request: Request) {
         }),
       );
     }
+    if (error instanceof NowPaymentsHttpError && error.code === "AMOUNT_MINIMAL_ERROR")
+      return errorResponse("PAYMENT_AMOUNT_BELOW_PROVIDER_MINIMUM", "The order amount is below the current minimum supported by the payment provider.", 422);
     return errorResponse(
       "PAYMENT_UNAVAILABLE",
       "Payments are unavailable",

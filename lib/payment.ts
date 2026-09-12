@@ -158,7 +158,7 @@ async function applyTrustedPaymentUpdate(
           existing.provider !== options.webhook.provider ||
           existing.payloadHash !== options.webhook.payloadHash
         )
-          throw new Error("Webhook replay payload mismatch");
+          throw new PaymentProcessingError("BINDING_MISMATCH", "Webhook replay payload mismatch");
         return { duplicate: true, status: null, changed: false };
       }
     }
@@ -182,6 +182,8 @@ async function applyTrustedPaymentUpdate(
       );
     if (
       !purchase.expectedAmount ||
+      !purchase.expectedAmount.isFinite() ||
+      purchase.expectedAmount.lte(0) ||
       !purchase.payCurrency ||
       !purchase.network ||
       !purchase.paymentAddress
@@ -212,7 +214,7 @@ async function applyTrustedPaymentUpdate(
       "Invalid provider amounts",
     );
     if (
-      providerExpected.isNegative() ||
+      providerExpected.lte(0) ||
       providerExpected.decimalPlaces() > 12 ||
       providerPrice.isNegative() ||
       !providerExpected.eq(purchase.expectedAmount) ||
@@ -236,6 +238,8 @@ async function applyTrustedPaymentUpdate(
         "Invalid received amount",
       );
 
+    if (event.status === "PAID" && event.providerStatus !== "finished")
+      throw new PaymentProcessingError("INVALID_PAYMENT_TRANSITION", "Only finished payments may settle");
     let target = event.status;
     if (target === "PAID" && received.lt(purchase.expectedAmount))
       target = "PENDING";
@@ -468,6 +472,7 @@ export async function processPaymentEvent(
   providerName: string,
   event: VerifiedPaymentEvent,
   payload: string,
+  scheduleAfterResponse?: (task: () => Promise<void>) => void,
 ) {
   const hash = createHash("sha256").update(payload).digest("hex");
   let result: ApplyResult;
@@ -491,7 +496,13 @@ export async function processPaymentEvent(
     }
     throw error;
   }
-  await sendConfirmation(result);
+  if (scheduleAfterResponse) {
+    // Next.js after() tracks this work beyond the HTTP response. Best-effort:
+    // a process crash can lose email, but never committed payment fulfillment.
+    try { scheduleAfterResponse(() => sendConfirmation(result)); } catch {}
+  } else {
+    await sendConfirmation(result);
+  }
   return {
     duplicate: result.duplicate,
     status: result.status,
