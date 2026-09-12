@@ -1,11 +1,12 @@
 import type { NextConfig } from "next";
+import { getAppOrigin } from "./lib/app-url";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   output: "standalone",
   async headers() {
     const scriptSrc=process.env.NODE_ENV==="production"?"script-src 'self' 'unsafe-inline'":"script-src 'self' 'unsafe-inline' 'unsafe-eval'";
-    const csp=["default-src 'self'",scriptSrc,"style-src 'self' 'unsafe-inline'","img-src 'self' data: https://images.unsplash.com","font-src 'self'","connect-src 'self'","frame-src 'none'","frame-ancestors 'none'","base-uri 'self'","form-action 'self'","object-src 'none'","upgrade-insecure-requests"].join("; ");
+    const csp=["default-src 'self'",scriptSrc,"style-src 'self' 'unsafe-inline'","img-src 'self' blob: data: https://images.unsplash.com","font-src 'self'","connect-src 'self'","frame-src 'none'","frame-ancestors 'none'","base-uri 'self'","form-action 'self'","object-src 'none'","upgrade-insecure-requests"].join("; ");
     return [{source:"/(.*)",headers:[
       {key:"Content-Security-Policy",value:csp},{key:"Referrer-Policy",value:"strict-origin-when-cross-origin"},
       {key:"X-Content-Type-Options",value:"nosniff"},{key:"X-Frame-Options",value:"DENY"},
@@ -15,7 +16,7 @@ const nextConfig: NextConfig = {
   },
   experimental: { optimizePackageImports: ["lucide-react", "framer-motion"] },
   images: {
-    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
+    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }, new URL("/media/products/**", getAppOrigin())],
   },
 };
 

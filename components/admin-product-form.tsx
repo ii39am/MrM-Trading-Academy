@@ -4,6 +4,7 @@ import { BookOpenText, Bot, CircleDollarSign, ImageIcon, Info, Languages, Packag
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Spinner } from "@/components/ui";
+import { ProductImageUpload } from "@/components/product-image-upload";
 import { productSchema } from "@/lib/product-validation";
 import type { Locale } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -117,7 +118,8 @@ function strings(ar: boolean) {
     pricing: "التسعير",
     pricingHelp: "أدخل السعر بالدولار. سيُرسل إلى الخادم بوحدة السنت للتوافق مع نظام الدفع.",
     media: "الوسائط والهوية",
-    mediaHelp: "استخدم رابط صورة موثوقاً ولوناً مناسباً لهوية المنتج.",
+    image: "صورة المنتج",
+    mediaHelp: "ارفع صورة للمنتج واختر لوناً مناسباً لهويته.",
     telegram: "الوصول عبر Telegram",
     telegramHelp: "إعدادات المجموعة الخاصة التي تُستخدم لإنشاء روابط دخول مؤقتة وآمنة.",
     publishing: "النشر",
@@ -133,7 +135,6 @@ function strings(ar: boolean) {
     price: "السعر",
     currency: "العملة",
     pricePreview: "معاينة السعر",
-    image: "رابط صورة المنتج",
     accent: "لون المنتج",
     chatId: "معرّف محادثة Telegram",
     buttonEn: "نص زر Telegram بالإنجليزية",
@@ -156,7 +157,6 @@ function strings(ar: boolean) {
     invalid: "يرجى مراجعة هذا الحقل.",
     required: "مطلوب",
     slugHelp: "أحرف إنجليزية صغيرة وأرقام وشرطات فقط، مثل: price-action-basics",
-    imageHelp: "استخدم رابط HTTPS لصورة مناسبة وعالية الجودة.",
     chatHelp: "معرّف رقمي للمجموعة أو اسم مستخدم يبدأ بعلامة @.",
   } : {
     eyebrow: "Content management",
@@ -175,7 +175,8 @@ function strings(ar: boolean) {
     pricing: "Pricing",
     pricingHelp: "Enter the USD display price. It is converted to cents for the existing payment contract.",
     media: "Media & branding",
-    mediaHelp: "Use a trusted image URL and an accent that fits the product identity.",
+    image: "Product image",
+    mediaHelp: "Upload a product image and choose an accent that fits its identity.",
     telegram: "Telegram fulfillment",
     telegramHelp: "Private community settings used to issue secure, temporary access links.",
     publishing: "Publishing",
@@ -191,7 +192,6 @@ function strings(ar: boolean) {
     price: "Price",
     currency: "Currency",
     pricePreview: "Price preview",
-    image: "Product image URL",
     accent: "Product accent",
     chatId: "Telegram chat ID",
     buttonEn: "English Telegram button label",
@@ -214,7 +214,6 @@ function strings(ar: boolean) {
     invalid: "Please review this field.",
     required: "Required",
     slugHelp: "Lowercase letters, numbers, and hyphens only, for example: price-action-basics",
-    imageHelp: "Use a trusted HTTPS URL for a suitable high-quality image.",
     chatHelp: "A numeric private-chat ID or a username beginning with @.",
   };
 }
@@ -273,6 +272,7 @@ function ProductEditor({ product, locale }: { product?: Product; locale: Locale 
   const [values, setValues] = useState<Draft>(() => toDraft(product));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const cents = priceToCents(values.price);
   const formattedPrice = Number.isFinite(cents) && cents > 0
@@ -292,7 +292,7 @@ function ProductEditor({ product, locale }: { product?: Product; locale: Locale 
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || uploading) return;
     const payload = {
       slug: values.slug,
       titleEn: values.titleEn,
@@ -347,7 +347,7 @@ function ProductEditor({ product, locale }: { product?: Product; locale: Locale 
   }
 
   return (
-    <form onSubmit={save} noValidate aria-busy={busy} className="min-w-0">
+    <form onSubmit={save} noValidate aria-busy={busy || uploading} className="min-w-0">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-medium text-violet-300">{product ? copy.editing : copy.creating}</p>
@@ -359,7 +359,7 @@ function ProductEditor({ product, locale }: { product?: Product; locale: Locale 
         </span>
       </div>
 
-      <fieldset disabled={busy} className="grid min-w-0 items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_19rem]">
+      <fieldset disabled={busy || uploading} className="grid min-w-0 items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-6">
           <EditorSection icon={Languages} title={copy.basic} description={copy.basicHelp}>
             <div className="grid gap-5 md:grid-cols-2">
@@ -396,7 +396,7 @@ function ProductEditor({ product, locale }: { product?: Product; locale: Locale 
 
           <EditorSection icon={ImageIcon} title={copy.media} description={copy.mediaHelp}>
             <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_12rem]">
-              <TextField name="image" label={copy.image} required value={values.image} onChange={value => update("image", value)} error={errors.image} help={copy.imageHelp} dir="ltr" inputMode="url" placeholder="https://…" />
+              <ProductImageUpload value={values.image} onChange={value => update("image", value)} onBusyChange={setUploading} disabled={busy} error={errors.image} ar={ar} />
               <FormField name="accent" label={copy.accent} required error={errors.accent}>
                 <div className="flex gap-2">
                   <input type="color" aria-label={copy.accent} value={/^#[0-9a-f]{6}$/i.test(values.accent) ? values.accent : "#7C3AED"} onChange={event => update("accent", event.target.value.toUpperCase())} className="h-12 w-14 shrink-0 cursor-pointer rounded-xl border border-violet-200/15 bg-transparent p-1" />
@@ -428,7 +428,7 @@ function ProductEditor({ product, locale }: { product?: Product; locale: Locale 
             <ToggleField name="published" checked={values.published} onChange={checked => update("published", checked)} label={copy.published} help={copy.publishedHelp} />
             {errors.telegramChatId && values.published && <p role="alert" className="mt-3 text-xs leading-5 text-red-300">{errors.telegramChatId}</p>}
             <div className="mt-6 border-t border-violet-200/10 pt-5">
-              <Button type="submit" disabled={busy} className="w-full">
+              <Button type="submit" disabled={busy || uploading} className="w-full">
                 {busy ? <Spinner /> : <Save className="h-4 w-4" aria-hidden="true" />}
                 {busy ? copy.saving : copy.save}
               </Button>

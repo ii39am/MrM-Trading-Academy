@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,8 +34,12 @@ const product = {
 beforeEach(() => {
   navigation.refresh.mockReset();
   vi.stubGlobal("fetch", vi.fn());
+  vi.stubGlobal("URL", class extends URL {
+    static createObjectURL() { return "blob:preview"; }
+    static revokeObjectURL() {}
+  });
 });
-afterEach(() => cleanup());
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("admin product editor", () => {
   it("renders structured, human-readable English fields and the live preview", () => {
@@ -48,6 +52,9 @@ describe("admin product editor", () => {
     expect(screen.getAllByText("$99.25")).toHaveLength(2);
     expect(screen.queryByText("titleEn")).toBeNull();
     expect(screen.queryByText("priceCents")).toBeNull();
+    expect(screen.queryByRole("textbox", { name: /image/i })).toBeNull();
+    expect(screen.queryByText("Product image URL")).toBeNull();
+    expect(screen.getByAltText("Product image preview").getAttribute("src")).toBe(product.image);
   });
 
   it("renders natural Arabic labels in an RTL editor", () => {
@@ -103,4 +110,45 @@ describe("admin product editor", () => {
     expect((telegram as HTMLInputElement).checked).toBe(true);
     expect((publishing as HTMLInputElement).checked).toBe(true);
   });
+});
+
+it("replaces an image through upload and sends its generated URL to the product save API", async () => {
+  const url = "https://academy.example.test/media/products/12345678-1234-4234-8234-123456789abc.webp";
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ url }), { status: 201 })).mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })));
+  const user = userEvent.setup(); render(<AdminProductForm products={[product]} locale="en" />);
+  await user.upload(screen.getByLabelText(/Product image/), new File(["fixture"], "new.png", { type: "image/png" }));
+  await waitFor(() => expect(screen.getByAltText("Product image preview").getAttribute("src")).toBe(url));
+  await user.click(screen.getByRole("button", { name: "Save product" }));
+  expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/admin/uploads/product-image");
+  expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body)).image).toBe(url);
+});
+
+it("removes only the draft image and requires a replacement before saving", async () => {
+  const user = userEvent.setup(); render(<AdminProductForm products={[product]} locale="en" />);
+  await user.click(screen.getByRole("button", { name: "Remove image" }));
+  expect(screen.queryByAltText("Product image preview")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Save product" }));
+  expect(fetch).not.toHaveBeenCalled(); expect(screen.getByRole("button", { name: "Choose image" })).toBeTruthy();
+});
+
+it("shows upload progress, disables save, and retains the original image after failure", async () => {
+  let finish!: (response: Response) => void;
+  vi.mocked(fetch).mockReturnValue(new Promise(resolve => { finish = resolve; }));
+  const user = userEvent.setup(); render(<AdminProductForm products={[product]} locale="en" />);
+  await user.upload(screen.getByLabelText(/Product image/), new File(["fixture"], "new.png", { type: "image/png" }));
+  expect((screen.getByRole("button", { name: "Save product" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByText("Validating and uploading image…")).toBeTruthy();
+  finish(new Response(JSON.stringify({ error: { code: "UPLOAD_UNAVAILABLE", message: "internal path must not display" } }), { status: 503 }));
+  await screen.findByText("Image upload failed. Please try again.");
+  expect(screen.getByAltText("Product image preview").getAttribute("src")).toBe(product.image);
+  expect(screen.queryByText(/internal path/)).toBeNull();
+});
+
+it.each([
+  [new File(["bad"], "bad.svg", { type: "image/svg+xml" }), "Choose a valid"],
+  [new File([new Uint8Array(5 * 1024 * 1024 + 1)], "large.png", { type: "image/png" }), "no larger than 5 MB"],
+])("validates selected files before uploading", async (file, expected) => {
+  render(<AdminProductForm products={[product]} locale="en" />);
+  fireEvent.change(screen.getByLabelText(/Product image/), { target: { files: [file] } });
+  expect(await screen.findByText(new RegExp(expected))).toBeTruthy(); expect(fetch).not.toHaveBeenCalled();
 });
